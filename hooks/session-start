@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cat >/dev/null 2>&1 || true   # drain stdin
+
+read -r -d '' CTX <<'RULES' || true
+# appintoss 플러그인 — 핵심 운영 규칙 (항상 적용, 간단 지시에도)
+
+이 프로젝트는 appintoss 미니앱 플러그인이 활성화돼 있다. 메인 에이전트는 스킬을 호출하지 않는 간단한 작업에도 아래 규칙을 따른다. 상세는 각 스킬(`pipeline`, `ait-login`, `ait-submit`, `ait-assets`) 참조.
+
+1. 스크린샷·이미지 보고는 **md 파일에 `![](상대경로)`로 임베드**하고 채팅엔 그 **md 절대경로 1줄만** 제시한다. 채팅에 경로를 나열하지 않는다(터미널은 이미지 인라인 불가). 보고 전 Read로 이미지를 확인한다.
+2. 작업 완료 보고는 주요 산출물의 **절대경로**를 출력한다(REPORT·SUBMIT·.ait·assets 등). 사용자가 바로 열 수 있게.
+3. 빌드는 `npx ait build`(구 granite build 폐기) + 재빌드 시 `npm version patch --no-git-tag-version` 필수.
+4. 토스 로그인: **이름(user_name)은 필수 동의 강제** → 동의 0개 불가, 복호화 키·AAD·복호화 로직 항상 필요. 약관 URL 필수.
+5. 되묻지 말고 자동 진행한다(코드로 판정 → 자동 산출 → 콘솔 수동항목만 1회 일괄 요청).
+6. 콘솔 정책·규격이 불확실하면 추측하지 말고 공홈(https://developers-apps-in-toss.toss.im/) 또는 ax MCP로 확인한다.
+RULES
+
+escaped_context=$(printf '%s' "$CTX" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read())[1:-1])")
+
+cat <<JSON
+{
+  "hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": "${escaped_context}"
+  }
+}
+JSON
+exit 0

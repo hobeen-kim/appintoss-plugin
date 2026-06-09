@@ -1,0 +1,18 @@
+{
+  "name": "appintoss-local",
+  "description": "Local marketplace for appintoss miniapp pipeline plugin",
+  "owner": {
+    "name": "hobeen-kim"
+  },
+  "plugins": [
+    {
+      "name": "appintoss",
+      "description": "앱인토스 미니앱 무개입 생성 파이프라인 — 주제 하나로 코드+.ait+검수리포트+제출 에셋 완성",
+      "version": "2.20.0",
+      "source": "./",
+      "author": {
+        "name": "hobeen-kim"
+      }
+    }
+  ]
+}

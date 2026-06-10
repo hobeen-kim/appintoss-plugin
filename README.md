@@ -1,4 +1,4 @@
-# appintoss-plugin v2.9.0
+# appintoss-plugin v2.21.0
 
 앱인토스(Apps in Toss) 미니앱 **무개입 생성 파이프라인** Claude Code 플러그인. 주제 한 줄로 검수 통과 수준의 미니앱(코드 + `.ait` 번들 + 검수리포트 + 콘솔 제출 에셋)을 완성한다.
 
@@ -7,6 +7,7 @@
 ```
 /appintoss:create "가계부 미니앱"     # 신규 생성 — Phase 0~7 무개입 완주
 /appintoss:update "월별 통계 추가"    # 기존 앱 기능 추가·수정 — 영향 분석 후 증분 적용
+/appintoss:sync-docs                 # 번들 reference를 공홈과 대조·갱신
 ```
 
 산출물: `PLAN.md`, `DESIGN.md`, `src/`, `{appName}.ait`, `REVIEW-REPORT.md`, `docs/assets/`(아이콘 600×600 · 화면예시 636×1048 ×3 · 썸네일 1932×828), `PIPELINE-LOG.md`(게이트 증거), `docs/REPORT-v{version}.md`(완료 보고서 — 변경 내역·스크린샷 임베드, 승인 대기)
@@ -31,9 +32,9 @@
 ```
 appintoss-plugin/
 ├── .claude-plugin/
-│   ├── plugin.json           # manifest (v2.9.0)
+│   ├── plugin.json           # manifest (v2.21.0)
 │   └── marketplace.json      # 로컬 마켓플레이스 (appintoss-local)
-├── commands/                 # 3개: create.md, update.md, improve.md — 페이즈 머신 진입점
+├── commands/                 # 4개: create.md, update.md, improve.md, sync-docs.md — 페이즈 머신 진입점
 ├── agents/                   # 6개: planner, designer, app-developer,
 │                             #       back-developer, visual-qa, reviewer(devops 통합)
 ├── skills/                   # 21개
@@ -67,7 +68,7 @@ llms.txt 인덱스: https://developers-apps-in-toss.toss.im/llms-full.txt · htt
 
 ## 문서 신선도
 
-번들 reference는 2026-06-07 공홈 대조 기준. stale 가능성이 있으므로 각 스킬은 불확실 시 공홈(https://developers-apps-in-toss.toss.im/)을 런타임 조회한다. 주기적 일괄 갱신은 수동 수행.
+번들 reference는 2026-06-10 공홈 대조 기준. stale 가능성이 있으므로 각 스킬은 불확실 시 공홈(https://developers-apps-in-toss.toss.im/)을 런타임 조회한다. 주기적 일괄 갱신은 수동 수행.
 
 ## 설치
 

@@ -37,10 +37,6 @@ designer가 작성한 `DESIGN.md`를 UX 관점 체크리스트로 검토한다.
 
 미충족 항목은 **구체 코멘트(어떤 화면·어떤 항목·무엇이 부족)** 와 함께 designer로 반려한다(크리틱 루프). 체크리스트 전항목 충족 시에만 승인한다. update 모드에서는 영향받는 페이지만 크리틱한다.
 
-## Phase 4 — 시나리오 교차확인
-
-교차확인: DESIGN.md 시나리오 수 = PIPELINE-LOG 실행 수 일치 검증.
-
 ## Phase 3-C 패널 — 규칙 검토
 
 Phase 3-C에서 **규칙 준수 관점**으로 패널에 참여한다. visual-qa가 캡처한 스크린샷을 오케스트레이터가 전달하면(서브에이전트 직접 통신 불가, 중계 패턴), 스크린샷에서 **육안으로** 다음 위반이 보이는지 점검한다.
@@ -60,8 +56,14 @@ Phase 3-C에서 **규칙 준수 관점**으로 패널에 참여한다. visual-qa
 - **라이트모드**: 다크모드 분기 **0건** (grep으로 기계 판정).
 - **a11y**: `ait-a11y` 체크리스트.
 - **검수 UI 규칙**: `ait-review`의 ui-rules.
+- **eval/동적 실행 사전 스캔**: 빌드 산출물(`dist`) **전체**를 대상으로 `eval(`·`new Function(`·`Function(` 패턴을 grep한다. **주석 처리된 코드·서드파티 라이브러리 내부 호출까지 검출 대상**이다 — 토스 보안 스캐너가 주석 속 `eval`도 검출해 반려한 실사례가 있다. 검출 시 게이트 FAIL — grep 결과(파일:라인)와 함께 Phase 2로 반려한다(서드파티 유래면 해당 의존성 교체·제거 검토).
+- **외부 링크 인지 UI 체크**: `openURL` 등 외부 이동 호출 지점마다, 이동 **전에** 사용자가 외부로 나간다는 것을 인지할 수 있는 UI(모달 확인 또는 명시적 라벨)가 있는지 확인한다. 누락 시 게이트 FAIL.
 
 게이트는 **위반 0건**. 위반 발견 시 grep 결과와 함께 Phase 2로 반려하고, 위반 0건이 될 때까지 루프한다.
+
+### 시나리오 교차확인
+
+교차확인: DESIGN.md 시나리오 수 = PIPELINE-LOG 실행 수 일치 검증.
 
 ## Phase 5 — 빌드
 
@@ -89,7 +91,7 @@ Phase 3-C에서 **규칙 준수 관점**으로 패널에 참여한다. visual-qa
 
 1. git 저장소가 아니면 `git init`.
 2. 의도한 산출물만 `git add` (`.gitignore` 준수).
-3. 커밋 메시지: `feat(appintoss): {앱명} v{version} - {1줄 요약}`, 끝에 `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>` trailer.
+3. 커밋 메시지: `feat(appintoss): {앱명} v{version} - {1줄 요약}`, 끝에 `Co-Authored-By: Claude <noreply@anthropic.com>` trailer.
 4. remote가 있으면 현재 브랜치 push, 없으면 "remote 미설정 — 로컬 커밋만" 기록 후 정상 종료.
 5. 커밋 해시·브랜치·push 여부를 `docs/REPORT-v{version}.md` §빌드 또는 새 §배포 줄에 기록.
 

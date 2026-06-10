@@ -20,34 +20,35 @@
 ### 앱인토스 플랫폼
 | 스킬 | 용도 |
 |------|------|
-| `common-ait-rules` | 검수 기준, UI 제약, 번들 제한 |
-| `ait-sdk` | 네이티브 브릿지, 저장소, 권한, 광고 |
-| `ait-build` | granite CLI, 빌드, 번들링 |
-| `ait-review` | 검수 체크리스트 |
-| `ait-deeplink` | 딥링크, 네비게이션 |
-| `ait-analytics` | 이벤트 로깅 |
+| `ait-sdk` | SDK API — 네이티브 브릿지, 저장소, 권한, 광고, 이벤트 |
+| `ait-build` | granite CLI — 빌드, 번들링, 개발 서버, 트러블슈팅 |
+| `ait-review` | 검수 기준 및 출시 전 11단계 체크리스트 (실제 반려 사례 기반) |
+| `ait-submit` | 제출 전 최종 검수 + 출시노트/기능 목록(docs/SUBMIT.md) 작성 |
+| `ait-deeplink` | 딥링크, 페이지 네비게이션, 백/홈 이벤트 처리 |
+| `ait-analytics` | Analytics API — 화면 조회, 노출, 클릭 이벤트 로깅 |
+| `ait-login` | 토스 로그인(OAuth2) 연동 — mTLS 인증서, 연동 해제 콜백 |
+| `ait-promotion-reward` | 프로모션/리워드 — 출석 보상, 공유 리워드, 미션, 인앱결제 |
+| `ait-smart-message` | 토스 푸시 알림 마케팅 소재 생성 — CTR 문구, 세그먼트, A/B 테스트 |
+| `ait-coachmark` | 온보딩/코치마크 — TDS Tooltip 기반 첫 사용자 경험(FTUE) |
+| `ait-a11y` | 프론트엔드 접근성(a11y) 가이드 — 4대 원칙 기반 체크리스트 |
+| `ait-deus` | Deus 앱빌더 코드를 프로젝트에 통합 |
+| `ait-docs` | 공식 문서 검색 — ax CLI 기반 Developer Center, TDS 문서 |
+| `ait-assets` | 콘솔 제출 에셋(앱 아이콘·화면 예시·썸네일) 자동 생성 |
+| `ait-setup` | 파이프라인 프로젝트 설정(.appintoss.json) 초기화 |
 
 ### 개발
 | 스킬 | 용도 |
 |------|------|
-| `front-tds` | TDS 컴포넌트 77개 사용법 |
-| `front-design` | 페이지별 디자인 명세 |
-| `back-api` | API 명세 문서 작성 |
+| `front-tds` | TDS(@toss/tds-mobile) 컴포넌트 사용법 |
+| `front-design` | 페이지별 디자인 명세(docs/design/{page}/DESIGN.md) 작성 |
+| `back-api` | API 명세 문서(docs/API.md) 작성 |
 
 ### 워크플로우
 | 스킬 | 용도 |
 |------|------|
-| `orchestrator` | 멀티 에이전트 조율 |
-| `project-start` | 프로젝트 초기 세팅 |
-
-### Obsidian
-| 스킬 | 용도 |
-|------|------|
-| `save-plan` | 플랜 → vault 저장 |
-| `save-impl` | 구현 요약 → vault 저장 |
-| `save-note` | 범용 노트 → vault 저장 |
-| `obsidian-to-issue` | 노트 → GitHub Issue |
-| `obsidian-search` | vault 검색 |
+| `pipeline` | 무개입 생성 파이프라인의 페이즈·게이트·반려 규칙 단일 출처 |
+| `orchestrator` | 라우팅 보조 — 개별 작업 요청 시 에이전트/스킬 안내 |
+| `project-start` | 새 프로젝트 초기 세팅 — plan.md 작성 후 에이전트/스킬 선별 |
 
 ## 스킬 사용 원칙
 

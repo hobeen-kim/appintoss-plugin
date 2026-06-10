@@ -67,6 +67,19 @@
 
 ---
 
-> 검증: 2026-06-07 — WebSearch/WebFetch 기반 정리. 규모·연령·카테고리·성공사례는 [사실](출처 명기), 유입 맥락·바이럴·루프 반응은 [가설/공홈 미검증]. 미니앱 평균 체류 6.7분은 보도 기반으로 재확인 권장.
+## 4. 운영 벤치마크·참고 저장소
+
+### 운영 벤치마크 [사실]
+- 출시 미니앱의 약 **74%에서 실제 매출 발생**(1인 개발자 기준 71%). **등록→출시 평균 5일**, 출시 후 **첫 매출까지 평균 3일**. (출처: 앱인토스 블로그 https://toss.im/apps-in-toss/blog/solo-developer-revenue-apps-in-toss)
+- **프로모션(신규 유입) + 스마트 발송(리텐션) 조합** 시 MAU **최대 17배 증가** 사례. (출처: 동일 https://toss.im/apps-in-toss/blog/solo-developer-revenue-apps-in-toss)
+
+### 참고 저장소 [사실]
+- **toss/apps-in-toss-skills** — 공식 Claude Code 스킬(docs-search·project-validator). 검증 항목 벤치마크 대상.
+- **toss/apps-in-toss-examples** — 공식 예제 30+.
+- **robinade/apps-in-toss-fullstack-templates** — 커뮤니티. "반려 없는 첫 제출" 워크플로우·29개 SDK 예제.
+
+---
+
+> 검증: 2026-06-10 — WebSearch/WebFetch 기반 정리. 규모·연령·카테고리·성공사례는 [사실](출처 명기), 유입 맥락·바이럴·루프 반응은 [가설/공홈 미검증]. 미니앱 평균 체류 6.7분은 보도 기반으로 재확인 권장.
 
 이 문서는 stale 가능성이 있다. 수치·정책이 의사결정에 결정적이면 공홈을 재조회하라: https://toss.im/apps-in-toss , https://developers-apps-in-toss.toss.im/

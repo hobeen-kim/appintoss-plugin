@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.21.0 (2026-06-10)
+- 게이트 무결성: PIPELINE-LOG 반려 누적 원장(재개 시 카운트 복원·리셋 금지)·재진입 재수행 범위, a11y 미실행=FAIL(A11Y-SKIPPED 조건부 통과), update 시나리오 게이트 이원화(부분집합 K)+회귀 스모크, eval/동적실행 사전 스캔(dist·주석·서드파티 포함)·외부링크 인지 UI 정적 검사 — pipeline·visual-qa·reviewer 동기화
+- /appintoss:sync-docs 신설: 공홈 llms.txt·npm·릴리즈노트(lean.js 우회) 대조→reference 갱신. 파이프라인 드리프트는 docs/DRIFT.md 집계로 환류
+- ait-sdk 1차 갱신: 버전 v1.14.1→2.6.1, 신규 reference 6종(공유·토스페이·화면제어·화면이동·인터랙션·데이터/파일, 공홈 fetch 검증), 2026년 신규 API(requestReview·requestNotificationAgreement·fetchAlbumItems·openPDFViewer) 수록, 미존재 SDK(QR·생체·NFC·클라 푸시) 확정 명시, SDK 3.0 beta 모니터링
+- improve 환류: docs/IMPROVE-BACKLOG.md 백로그 저장·소비(재진단 생략)·staleness 무효 처리, --metrics 입력(성능 대시보드·광고 지표), 중복 비교 전체 확대
+- SUBMIT.md 집약 규칙: 콘솔 업로드 관련 정보는 SUBMIT.md 한 파일에 집약(업로드 절차·검수 안내·자가점검 섹션 신설) — ait-submit·pipeline·ait-login·ait-assets 동기화
+- 에셋 정체성 규칙: 에셋 컨셉 선언(주조색·기능 메타포·무드) 선행 + 템플릿 룩 금지 + 자가 점검 2문항 — Phase 7 게이트 편입 (배너·아이콘 앱별 차별화)
+- ait-review 체크리스트 보강(표준 내비바·AOS 백버튼·종료 모달), 광고 운영 정량 기준(eCPM·배치·리워드 포인트 우회 구조), TDS 핵심 11컴포넌트 우선, 운영 벤치마크 수록, skill-guide 현행화
+
 ## 2.20.0 (2026-06-09)
 - SessionStart hook 추가: 핵심 운영 규칙(스크린샷 md 임베드, 산출물 절대경로 보고, ait build+버전범프, 이름 필수·복호화, 자동 진행, 공홈 확인)을 매 세션 컨텍스트에 주입. 스킬 미로드 간단 지시에도 메인 에이전트가 규칙을 따르게 함
 

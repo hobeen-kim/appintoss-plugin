@@ -181,6 +181,20 @@ export const FEED_AD_GROUP_ID = 'ait-ad-test-native-image-id';
 - 광고 색상, 배치, 크기 임의 변경
 - 클릭 시 리워드 제공 문구 추가
 
+## 광고 운영 정량 기준 (커뮤니티 실측)
+
+- 광고 ID별 **일 1만 노출** 전에는 최적화가 의미 없음 — 그 이하 트래픽에서 eCPM 변동은 노이즈
+- 배너는 **폴드라인에 1개만** 배치, 상하 2개 배치 비권장
+- 한 지면에는 **단일 광고 ID**로 통일
+- 보상형/전면형은 AdMob+토스애즈 혼합(**토스애즈 비중 5~30%**), 배너는 토스애즈 단독 권장
+- **리워드 수령과 동시에 토스포인트 지급 불가(공식 확인)** — "리워드 적립 후 포인트 교환" 우회 구조 필수
+- `userEarnedReward` 미발화 사례 보고 — 공홈 API에는 정의돼 있으나(상단 ShowFullScreenAdEvent union 참조) 환경에 따라 이벤트가 오지 않았다는 커뮤니티 보고가 있음. 완주 판정을 이 이벤트에만 의존하지 말고 미발화 폴백(예: 종료 이벤트 + 시청 시간)을 두고 실측 검증할 것
+
+> 출처 (2026-06-10 수집):
+> - https://techchat-apps-in-toss.toss.im/t/ecpm/3926
+> - https://techchat-apps-in-toss.toss.im/t/topic/3962
+> - https://techchat-apps-in-toss.toss.im/t/2-0-70/818
+
 ## UX 원칙 (Toss Principles)
 
 - **Simplicity**: 추가 설명 없이 의미 이해 가능해야 함

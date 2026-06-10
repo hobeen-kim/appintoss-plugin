@@ -1,5 +1,5 @@
 {
-  "name": "appintoss-local",
+  "name": "appintoss-plugin",
   "description": "Local marketplace for appintoss miniapp pipeline plugin",
   "owner": {
     "name": "hobeen-kim"

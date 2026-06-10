@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.21.2 (2026-06-10)
+- /appintoss:improve 보고서 생성 검증 게이트 추가: update --auto 호출 후 docs/REPORT-v{version}.md 실재를 확인하고 없으면 완료 처리 금지·Phase 8' 보고서 생성을 즉시 보완. improve가 IMPROVE-LOG만 기록하고 보고서 없이 종료하던 누락 경로 차단(실사례: IMPROVE-LOG와 REPORT 생성 시각 불일치). 5번에 Phase 8' 보고서 생성=자동 모드에서도 생략 불가 명시
+
 ## 2.21.1 (2026-06-10)
 - ait-sdk 친구초대 reference 추가(ait-contacts-viral.md): contactsViral + 타입 4종 공홈 fetch 검증, 리워드 지급 구조(적립 후 교환) 연계 명시. 미수록 목록에서 제거
 

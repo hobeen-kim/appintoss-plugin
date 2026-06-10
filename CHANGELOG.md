@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.21.1 (2026-06-10)
+- ait-sdk 친구초대 reference 추가(ait-contacts-viral.md): contactsViral + 타입 4종 공홈 fetch 검증, 리워드 지급 구조(적립 후 교환) 연계 명시. 미수록 목록에서 제거
+
 ## 2.21.0 (2026-06-10)
 - 게이트 무결성: PIPELINE-LOG 반려 누적 원장(재개 시 카운트 복원·리셋 금지)·재진입 재수행 범위, a11y 미실행=FAIL(A11Y-SKIPPED 조건부 통과), update 시나리오 게이트 이원화(부분집합 K)+회귀 스모크, eval/동적실행 사전 스캔(dist·주석·서드파티 포함)·외부링크 인지 UI 정적 검사 — pipeline·visual-qa·reviewer 동기화
 - /appintoss:sync-docs 신설: 공홈 llms.txt·npm·릴리즈노트(lean.js 우회) 대조→reference 갱신. 파이프라인 드리프트는 docs/DRIFT.md 집계로 환류

@@ -1,4 +1,4 @@
-# appintoss-plugin v2.21.0
+# appintoss-plugin v2.21.1
 
 앱인토스(Apps in Toss) 미니앱 **무개입 생성 파이프라인** Claude Code 플러그인. 주제 한 줄로 검수 통과 수준의 미니앱(코드 + `.ait` 번들 + 검수리포트 + 콘솔 제출 에셋)을 완성한다.
 
@@ -32,7 +32,7 @@
 ```
 appintoss-plugin/
 ├── .claude-plugin/
-│   ├── plugin.json           # manifest (v2.21.0)
+│   ├── plugin.json           # manifest (v2.21.1)
 │   └── marketplace.json      # 로컬 마켓플레이스 (appintoss-local)
 ├── commands/                 # 4개: create.md, update.md, improve.md, sync-docs.md — 페이즈 머신 진입점
 ├── agents/                   # 6개: planner, designer, app-developer,

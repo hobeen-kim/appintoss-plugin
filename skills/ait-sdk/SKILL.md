@@ -18,6 +18,7 @@ references:
   - ./references/ait-navigation.md
   - ./references/ait-interaction.md
   - ./references/ait-data-file.md
+  - ./references/ait-contacts-viral.md
 ---
 
 # 앱인토스 SDK 가이드
@@ -53,12 +54,12 @@ references:
 | 화면 이동 | `openURL`, Routing | 외부 URL, 화면 간 이동, 외부링크 정책 |
 | 인터랙션 | `generateHapticFeedback`, `requestReview`, `requestNotificationAgreement` | 햅틱, 리뷰 요청, 알림 수신 동의 |
 | 데이터/파일 | `saveBase64Data`, `openPDFViewer`, `fetchAlbumItems` | 파일 저장, PDF 뷰어, 앨범 |
+| 친구초대 | `contactsViral` | 연락처 기반 친구초대 모듈, 공유 리워드 |
 
 ## 미수록 영역 (존재하나 미수록 — 필요 시 공홈 조회)
 
 다음 API는 공홈에 존재하지만 본 스킬 reference에는 미수록이다. 필요하면 공홈을 조회하라.
 
-- 친구초대: `contactsViral`
 - 네트워크: `getNetworkStatus`, `http`
 - 환경확인 확장: `getTossAppVersion`, `getPlatformOS`, `getDeviceId`, `getSchemeUri`, `getOperationalEnvironment`, `getLocale`
 - 가시성 감지: `InView`, `ImpressionArea`, `useVisibility` 등

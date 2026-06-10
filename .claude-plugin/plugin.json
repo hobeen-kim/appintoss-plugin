@@ -1,6 +1,6 @@
 {
   "name": "appintoss",
-  "version": "2.22.0",
+  "version": "2.22.1",
   "description": "앱인토스 미니앱 무개입 생성 파이프라인 — 주제 하나로 검수 통과 수준의 미니앱(코드 + .ait 번들 + 검수리포트 + 콘솔 제출 에셋)을 완성. 페이즈 머신 기반 create/update 커맨드, 6개 에이전트, 21개 스킬",
   "author": {
     "name": "hobeen-kim"
@@ -12,6 +12,5 @@
     "tds",
     "granite",
     "pipeline"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }

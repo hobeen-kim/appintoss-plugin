@@ -52,7 +52,8 @@ pipeline 스킬의 update 모드 정의를 따른다. 각 페이즈는 해당 �
 
 ```
 보고서:   {프로젝트 절대경로}/docs/REPORT-v{version}.md   ← 검토 후 승인해 주세요 (before/after 비교 포함)
-제출문서: {프로젝트 절대경로}/docs/SUBMIT.md (업데이트 노트 v{version} 추가됨 + 에셋)
+앱명세:   {프로젝트 절대경로}/docs/APP-SPEC.md (앱 전체 명세 마스터)
+제출문서: {프로젝트 절대경로}/docs/SUBMIT.md (업데이트 노트 v{version} 추가됨 + 앱 내 기능)
 검수:     {프로젝트 절대경로}/docs/REVIEW-REPORT.md
 빌드:     {프로젝트 절대경로}/{appName}.ait (v{이전}→v{현재})
 ```

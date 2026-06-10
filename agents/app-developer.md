@@ -1,8 +1,9 @@
 ---
 name: app-developer
 description: Phase 2 프론트 구현 — DESIGN.md를 React + TDS 코드(src/)로 구현한다. 스택 고정, Presentation/Logic 분리, 비주얼 QA 반려 항목 수정 담당.
-model: sonnet
+model: opus
 skills:
+  - pipeline
   - front-tds
   - ait-sdk
   - ait-deeplink
@@ -14,7 +15,7 @@ skills:
 
 # App-Developer Agent
 
-앱인토스 미니앱의 프론트엔드를 구현하는 에이전트입니다. 파이프라인 **Phase 2(구현)**를 담당하며, 기준은 `skills/pipeline/SKILL.md`를 따릅니다.
+앱인토스 미니앱의 프론트엔드를 구현한다. 파이프라인 **Phase 2(구현)**를 담당한다. 페이즈·게이트·반려 규칙은 `pipeline` 스킬을 단일 출처로 따른다.
 
 ## 책임
 
@@ -60,14 +61,9 @@ Phase 3(비주얼 검증)에서 점수표 + 위반 목록과 함께 반려되면
 
 ## 광고 슬롯 구현
 
-광고 슬롯 구현 시 `ait-sdk` ads API + `isSupported()` 체크, 보상형은 `userEarnedReward`에서만 보상·중복 방지.
+- ads API 사용 전 `isSupported()` 체크를 반드시 수행한다.
+- 보상형 광고는 `userEarnedReward` 콜백에서만 보상을 지급하고 중복 지급을 방지한다.
 
-## SDK / 컴포넌트 API 불확실 시
+## 하이브리드 문서 지침
 
-SDK(`@apps-in-toss/web-framework`)나 TDS 컴포넌트의 API·props·시그니처가 불확실하면 추측하지 말고 **공식 문서를 조회**한다. 조회 수단 우선순위:
-
-1. **ax MCP** (`apps-in-toss` 서버, 연결된 세션이면) 또는 `docs-search` 스킬
-2. **llms-full.txt** — https://developers-apps-in-toss.toss.im/llms-full.txt · https://tossmini-docs.toss.im/tds-mobile/llms-full.txt (인덱스: https://developers-apps-in-toss.toss.im/llms.txt)
-3. **공홈 WebFetch** — https://developers-apps-in-toss.toss.im/
-
-번들 문서(`knowledge/`, `skills/*/references/`)는 stale일 수 있으므로, 공홈과 충돌하면 공홈을 신뢰한다. 공홈 조회로 해결한 API 불일치는 번들 문서 갱신 제안을 리포트에 남긴다.
+추측하지 말고 공식 문서를 조회한다. 조회 수단·우선순위는 pipeline 스킬 §0-1을 따른다. 공홈과 번들 문서 충돌 시 공홈 신뢰. 발견한 드리프트는 `docs/DRIFT.md`에 구조화 집계한다(pipeline 스킬 §0-1).

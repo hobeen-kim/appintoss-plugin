@@ -59,7 +59,7 @@ node ait-console.cjs release --app <appName>
 **파이프라인 자동 범위** (테스트 발송까지만):
 
 - create 끝: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동 저장+검증) → [`--submit` 명시 시 앱정보 검수 제출] → `upload`(테스트 버전) → `test-send`
-- update 끝: `upload`(테스트 버전) → `test-send`
+- update 끝: `upload`(테스트 버전) → `test-send` — upload 성공 시 test-send 무조건 수행(실앱 포함, 보류 금지)
 
 `set-app-info`는 docs/APP-SPEC.md(부제·상세설명·카테고리 1순위·검색키워드)와 docs/assets(icon·screenshot-1~3·thumbnail)를 콘솔에 반영한다. 기본은 **draft 저장+readback 검증까지만**이며, **앱정보 검수 제출(POST mini-app/review)은 `--submit` 명시 시에만** 수행한다. 업로드된 아이콘의 콘솔 발급 static URL은 출력으로 안내되므로 granite.config.ts `brand.icon`을 이 URL로 갱신한다.
 
@@ -196,7 +196,7 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 파이프라인(`skills/pipeline/SKILL.md`)의 create·update 모드 종료 시 이 스킬이 자동으로 호출된다:
 
 - **create 모드 끝**: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동) → `upload` → `test-send` — 앱정보 검수 제출은 `set-app-info --submit` 명시 시에만
-- **update 모드 끝**: `upload` → `test-send`
+- **update 모드 끝**: `upload` → `test-send` — upload 성공 시 test-send 무조건 수행(실앱 포함, 보류 금지)
 
 각 단계의 성공·실패는 `docs/PIPELINE-LOG.md`와 `docs/REPORT-v{version}.md`에 기록된다.
 
@@ -206,9 +206,11 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 
 ## 9. 테스트 정책
 
-**실제 write(register·upload·test-send·submit-review·release·ad-apply)는 테스트 앱 `today-lucky-draw`에서만 수행한다.**
+**고위험 write(register·submit-review·release·ad-apply)는 테스트 앱 `today-lucky-draw`에서만 수행한다.**
+
+**예외 — `upload`·`test-send`는 테스트 앱 한정에서 제외한다.** 파이프라인 자동 범위에 속하므로 모든 앱(실앱 포함)에서 수행하며, **upload 성공 후 test-send는 무조건 수행한다 — 실앱이라는 이유로 보류·생략하지 않는다** (사용자 지시 2026-06-11).
 
 - `--dry-run` 플래그로 먼저 입력값·대상을 검증한다
 - QA 1단계: `--dry-run`/모의 검증(에이전트 실행 가능)
 - QA 2단계: 실콘솔 스모크는 사용자 입회 검증으로 진행
-- 타 앱에 write 서브커맨드 실행 금지
+- 고위험 write 서브커맨드는 타 앱에 실행 금지

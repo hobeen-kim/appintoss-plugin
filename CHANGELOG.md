@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.3.0 (2026-06-11)
+- test-send 무조건 발송 정책: upload 성공 후 test-send를 모든 앱(실앱 포함)에서 무조건 수행 — 테스트 앱 한정 write 정책에서 upload·test-send 제외, 보류·생략 금지 (사용자 지시). ait-console §9·§8·자동 범위, pipeline Phase C/C', create·update 커맨드 동기화
+
 ## 3.2.0 (2026-06-11)
 - bug-report 스킬 추가(자동 감지+승인 후 GitHub 이슈 발행) — 게이트 반복 반려·예외·콘솔 API 드리프트 감지 시 표준 양식 초안 제시, 사용자 승인 후 hobeen-kim/appintoss-plugin에 발행. .github/ISSUE_TEMPLATE/bug_report.md 동일 양식 제공
 

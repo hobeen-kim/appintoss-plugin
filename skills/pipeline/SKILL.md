@@ -283,11 +283,11 @@ Phase 8 보고서 생성 직후 `ait-console` 스킬을 통해 콘솔 테스트 
 
 각 단계의 성공·실패 결과는 `docs/REPORT-v{version}.md`의 §콘솔 테스트 단계에 기록한다. 단계 실패 시 실패 단계명·스크린샷 경로를 보고서에 남기고 계속 진행하지 않는다.
 
-**Phase C는 테스트 발송까지만 자동이다. 검토 요청·출시는 자동 수행하지 않는다.**
+**Phase C는 테스트 발송까지만 자동이다 — test-send는 upload 성공 시 무조건 수행(실앱 포함, 보류 금지). 검토 요청·출시는 자동 수행하지 않는다.**
 
 ### Phase C' — 콘솔 테스트 (update 모드, Phase 8' 직후 자동 수행)
 
-Phase C와 동일하되 register·upload-assets를 생략하고 upload(테스트 버전) → test-send만 수행한다. 결과는 update 보고서에 기록한다.
+Phase C와 동일하되 register·upload-assets를 생략하고 upload(테스트 버전) → test-send만 수행한다. **test-send는 upload 성공 시 무조건 수행한다 — 실앱 포함, 보류 금지.** 결과는 update 보고서에 기록한다.
 
 ---
 

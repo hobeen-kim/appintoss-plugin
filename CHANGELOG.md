@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0 (2026-06-11)
+- upload을 공식 ait deploy CLI 래퍼로 교체 — raw S3 3-step initialize→PUT→complete 방식은 콘솔 AccessDenied로 폐기(lib/api.cjs는 DEPRECATED 주석 보존)
+- API 키 토큰 인증(ait token add), memo(-m) 지원, 토큰 없으면 AIT_DEPLOY_API_KEY env로 자동 등록 또는 NEEDS_CONTEXT(exit 2)
+- 동일 번들 중복(Code 4097) 친절 안내: "코드 변경 후 ait build로 새 번들 빌드 후 재배포" + 빌드 전 버전 범프(npm version patch) 힌트 출력
+- ait deploy 실패 시 stdout+stderr를 stripAnsi 후 스피너 줄을 제거한 의미있는 마지막 줄들 노출(기존 stderr만 출력 시 스피너 오염으로 안 보이던 문제 개선)
+- upload 시그니처 변경: `upload <projectDir> [--memo] [--bundle]` (라이브 검증: deeplink 발급 성공)
+
 ## 3.0.1 (2026-06-11)
 - fix(ait-console): 번들 업로드 버그 2건 수정 — deploymentId를 UUIDv7로 생성(기존 crypto.randomUUID() v4는 errorCode 4000 거부), presigned S3 PUT content-type을 application/zip으로 수정(기존 application/octet-stream은 403 SignatureDoesNotMatch). dom-map 실측값과 정합. upload 라이브 검증 통과.
 - cmdUpload에 선택적 --deployment-id 인자 추가(빌드 deploymentId 주입 가능).

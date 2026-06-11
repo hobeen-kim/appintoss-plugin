@@ -201,7 +201,12 @@ DOM 진입: `/meta` → **`수정하기`** → 2탭 폼(기본 정보 / 카테�
 - **게이트 A(중요): 버전 검토 요청은 앱 정보(meta) 검토 승인이 선행 조건.** today-lucky-draw는 `GET /mini-app/{app}` 의 `hasApproved=false, hasInReview=true`(앱 정보 토스 심사 중)라, 검토 요청 클릭 시 출시노트 폼 대신 **"앱 정보 검토를 먼저 완료해 주세요 / 앱 정보가 승인되어야 앱을 출시할 수 있어요"** 다이얼로그(버튼 `닫기`/`이동하기`)가 떠 버전 검토 제출이 차단됨.
 - 신호 필드(bundles API): `reviewStatus`, `isTested`(bool), `sdkVersion`, `deployed`(bool). 앱 정보 게이트 신호(mini-app API): `hasApproved`/`hasInReview`/`hasDraft`, `miniApp.status`(`PREPARE`/`OPEN`).
 
-### 단계 1) 버전 업로드 — **API 3-step + presigned S3 PUT** (확정)
+### 단계 1) 버전 업로드 — **[DEPRECATED: raw S3 3-step — AccessDenied로 폐기]** / 현재: `ait deploy` CLI 래퍼 사용
+
+> **현행 방식**: `ait-console.cjs upload <projectDir>` → `node_modules/.bin/ait deploy -m <memo>` 실행(API 키 토큰 인증). deeplink·deploymentId를 stdout으로 보고. 동일 번들 중복 업로드는 Code 4097로 거부되며 친절 안내 출력.
+> **아래 raw S3 3-step 기록은 deprecated 참조 보존용** — AccessDenied로 인해 폐기됨. lib/api.cjs에도 DEPRECATED 주석 유지.
+
+### [deprecated 참조] 버전 업로드 — **API 3-step + presigned S3 PUT**
 DOM 진입: `/app-build` → (버전 0개면) 본문 "첫 버전을 등록하고 출시해보세요" + 버튼 **`+ 등록하기`**, (버전 ≥1이면) 우상단 버튼 **`버전 등록`** → 모달 `[role=dialog]` "버전 등록하기".
 - 모달 DOM: file input **`input[type=file][accept=".ait"]`** (id 예 `radix-:rNN:`, class `_8t6e210`), 메모 textarea `placeholder="입력하기"`, 권한 안내 문구, 제출 버튼 text **`등록`**.
 - Playwright 업로드: `page.locator('input[type=file]').setInputFiles('<path>.ait')` 후 모달 내 **`등록`** 버튼 클릭.

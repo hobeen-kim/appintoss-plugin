@@ -22,7 +22,9 @@
  *   4  watch 대기 만료 (--max 도달)
  */
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { execFile } = require('child_process');
 const api = require('./lib/api.cjs');
 const { asyncWatch, parseInterval } = require('./lib/watch.cjs');
 
@@ -205,52 +207,124 @@ async function cmdVersions(request, appName) {
   }
 }
 
-// ---------------------------------------------------------------- upload (캡처 API — 실동작)
-// dom-map §3-W 단계1: initialize -> presigned S3 PUT -> complete, 이후 bundles readback.
-async function cmdUpload(request, appName, bundlePath, flags) {
-  const { ws, appId } = await resolveApp(request, appName);
-  const stat = fs.statSync(bundlePath);
-  announceWrite('upload (테스트 버전 업로드 — initialize → presigned S3 PUT → complete)', {
-    앱: `${appName} (ws ${ws} / miniApp ${appId})`,
-    번들: `${bundlePath} (${(stat.size / 1024 / 1024).toFixed(2)}MB)`,
-    효과: '새 버전 생성(PREPARE→BUILDING→CREATED). 검토 요청/출시는 수행하지 않음',
+// ---------------------------------------------------------------- upload (공식 ait deploy CLI 래퍼)
+// raw S3 3-step(initialize→presigned PUT→complete)은 표면상 CREATED여도 콘솔이
+// 번들을 못 읽어 AccessDenied 발생 → 폐기(lib/api.cjs DEPRECATED 주석 참조).
+// 공식 경로: <projectDir>/node_modules/.bin/ait deploy [--location <.ait>] [-m <메모>]
+// — 앱 프로젝트 디렉터리를 cwd로 실행(granite.config 사용). 인증은 API 키 토큰
+// (`ait token add --api-key <key>`, 토큰은 ~/.ait/credentials 저장).
+
+function execFileP(file, args, opts) {
+  return new Promise((resolve) => {
+    execFile(file, args, { maxBuffer: 32 * 1024 * 1024, ...opts }, (err, stdout, stderr) => {
+      resolve({ err, stdout: String(stdout || ''), stderr: String(stderr || '') });
+    });
+  });
+}
+
+/** ~/.ait/credentials 존재 + 비어있지 않음 = 배포 토큰 등록됨. */
+function hasDeployToken() {
+  try {
+    return fs.statSync(path.join(os.homedir(), '.ait', 'credentials')).size > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Strip ANSI escapes + spinner carriage returns for output parsing. */
+function stripAnsi(s) {
+  return String(s).replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '').replace(/\r/g, '\n');
+}
+
+async function cmdUpload(projectDir, flags) {
+  const aitBin = path.join(projectDir, 'node_modules', '.bin', 'ait');
+  if (!fs.existsSync(aitBin)) {
+    throw new Error(`[upload] ait CLI 없음: ${aitBin} — 앱 프로젝트 의존성 설치(node_modules) 필요`);
+  }
+
+  // memo: --memo > 앱 package.json version > "auto"
+  let memo = typeof flags.memo === 'string' ? flags.memo : null;
+  if (!memo) {
+    try {
+      memo = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf8')).version || 'auto';
+    } catch {
+      memo = 'auto';
+    }
+  }
+
+  // 토큰 체크: 없으면 env AIT_DEPLOY_API_KEY로 자동 등록, 그것도 없으면 NEEDS_CONTEXT(exit 2).
+  if (!hasDeployToken()) {
+    const apiKey = process.env.AIT_DEPLOY_API_KEY;
+    if (apiKey) {
+      // API 키 값은 로그·파일에 절대 기록하지 않는다(저장은 ait가 ~/.ait에 수행).
+      console.log('[upload] 배포 토큰 없음 — AIT_DEPLOY_API_KEY 환경변수로 `ait token add` 자동 등록 시도');
+      const reg = await execFileP(aitBin, ['token', 'add', '--api-key', apiKey], { cwd: projectDir });
+      if (reg.err || !hasDeployToken()) {
+        const tail = stripAnsi(reg.stderr || reg.stdout).trim().split('\n').filter(Boolean).pop() || '원인 미상';
+        throw new Error(`[upload] ait token add 실패 — ${tail}`);
+      }
+      console.log('[upload] 토큰 등록 완료 (~/.ait/credentials)');
+    } else {
+      console.log(
+        '[upload] NEEDS_CONTEXT: 배포 토큰이 없습니다. 콘솔에서 발급한 API 키가 필요합니다. ' +
+        'AIT_DEPLOY_API_KEY 환경변수로 키를 주고 재실행하거나, `ait token add`로 등록하세요.'
+      );
+      process.exit(2);
+    }
+  }
+
+  const bundle = typeof flags.bundle === 'string' ? path.resolve(flags.bundle) : null;
+  announceWrite('upload (공식 ait deploy — 테스트 버전 배포)', {
+    프로젝트: projectDir,
+    번들: bundle || '(ait 기본 — projectDir 내 .ait, granite.config 기준)',
+    memo,
+    효과: '새 테스트 버전 배포(deeplink 발급). 검토 요청/출시는 수행하지 않음',
   });
 
-  // deploymentId: --deployment-id <uuid> 주입 또는 UUIDv7 자동 생성 (v4는 errorCode 4000)
-  const deploymentId = (flags && flags['deployment-id']) ? flags['deployment-id'] : api.generateDeploymentId();
-  // step 1/3: initialize — presigned uploadUrl + versionName 발급
-  const init = await api.initializeDeployment(request, ws, appId, deploymentId);
-  const versionName = init && init.deployment ? init.deployment.versionName : null;
-  if (!init || !init.uploadUrl || !versionName) {
-    throw new Error('[deployments/initialize] 응답에 uploadUrl/deployment.versionName 없음');
+  const args = ['deploy', ...(bundle ? ['--location', bundle] : []), '-m', memo];
+  console.log(`[upload] ait ${args.join(' ')} (cwd=${projectDir})`);
+  const r = await execFileP(aitBin, args, { cwd: projectDir, timeout: 10 * 60 * 1000 });
+  if (r.err) {
+    // Merge stdout+stderr, strip ANSI/spinner, and show the last meaningful lines.
+    const combined = stripAnsi(`${r.stdout}\n${r.stderr}`);
+    const meaningful = combined
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l && !/배포 중|Deploying|⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/.test(l));
+    const tail = meaningful.slice(-8);
+    if (tail.length) {
+      console.error('[upload] ait deploy 출력:');
+      for (const l of tail) console.error(`  ${l}`);
+    }
+    const tailStr = tail.join(' ');
+    if (/4097|이미 해당 앱 번들/.test(tailStr)) {
+      console.error(
+        '[upload] 동일 번들이 이미 업로드됨(4097) — 코드 변경 후 ait build로 새 번들을 빌드한 뒤 재배포하세요.' +
+        ' (콘솔은 동일 .ait 중복 업로드를 거부합니다.)' +
+        '\n[upload] 힌트: 빌드 전 npm version patch --no-git-tag-version 으로 버전을 올리는 것을 권장합니다(pipeline/SKILL.md 빌드 전 버전 범프 원칙).'
+      );
+    } else {
+      console.error(`[upload] ait deploy 실패 (exit ${r.err.code != null ? r.err.code : r.err.signal || '?'})`);
+    }
+    process.exit(1);
   }
-  console.log(`[upload 1/3] initialize 완료 — versionName=${versionName} (uploadUrl은 서명 포함이라 미출력)`);
 
-  // step 2/3: presigned S3 PUT (.ait 바이트)
-  await api.uploadBundleToPresignedUrl(request, init.uploadUrl, bundlePath);
-  console.log(`[upload 2/3] S3 PUT 완료 (${stat.size} bytes)`);
+  // 진행 스피너 줄이 많을 수 있으므로 deeplink는 마지막 매치만 파싱.
+  const out = stripAnsi(`${r.stdout}\n${r.stderr}`);
+  const links = out.match(/intoss-private:\/\/[^\s'"]+/g) || [];
+  const deeplink = links.length ? links[links.length - 1] : null;
+  const idMatch = deeplink ? deeplink.match(/_deploymentId=([\w-]+)/) : null;
+  const deploymentId = idMatch ? idMatch[1] : null;
 
-  // step 3/3: complete — 서버 빌드 시작
-  await api.completeDeployment(request, ws, appId, deploymentId);
-  console.log('[upload 3/3] complete 완료 — 서버 빌드 시작(BUILDING→CREATED)');
-
-  // readback: bundles에 새 versionName 등장 + 빌드 상태 폴링(최대 ~3분)
-  let bundle = null;
-  for (let i = 0; i < 36; i++) {
-    const versions = await api.getAppVersions(request, ws, appId);
-    bundle = versions.find((v) => v.versionName === versionName) || null;
-    if (bundle && bundle.reviewStatus !== 'PREPARE' && bundle.reviewStatus !== 'BUILDING') break;
-    await sleep(5000);
+  const lines = out.split('\n').map((l) => l.trim()).filter(Boolean);
+  for (const l of lines.slice(-4)) console.log(`[ait] ${l}`);
+  if (!deeplink) {
+    throw new Error('[upload] ait deploy 출력에서 deeplink(intoss-private://) 미발견 — 위 출력 확인 필요');
   }
-  if (!bundle) throw new Error(`[upload-readback] bundles에 versionName=${versionName} 미등장`);
-  console.log(
-    `[readback] versionName=${versionName} reviewStatus=${bundle.reviewStatus} ` +
-    `sdkVersion=${bundle.sdkVersion || '-'} isTested=${bundle.isTested}`
-  );
-  if (bundle.reviewStatus === 'PREPARE' || bundle.reviewStatus === 'BUILDING') {
-    console.log('[readback] 빌드 아직 진행 중 — 이후 `versions` 서브커맨드로 CREATED 전이 확인 가능');
-  }
-  console.log(`[done] upload 완료 — 다음 단계: node ait-console.cjs test-send ${appName}`);
+  console.log(`\n[done] upload 완료 — memo=${memo}`);
+  console.log(`  deeplink: ${deeplink}`);
+  console.log(`  deploymentId: ${deploymentId || '(파싱 실패)'}`);
+  console.log('  다음 단계: node ait-console.cjs test-send <appName>');
 }
 
 // ---------------------------------------------------------------- test-send (캡처 API — 실동작)
@@ -805,8 +879,12 @@ write (캡처 API — 실동작):
                                   → GET draft readback 항목별 검증. 발급 iconUri 출력(granite.config 갱신용)
                                   기본은 draft 저장+검증까지만 — **앱정보 검수 제출은 --submit 명시 필요**
                                   --docs 생략 시 cwd/docs 사용. 카테고리 매핑 실패 시 후보 출력 후 중단
-  upload <appName> <bundle.ait>   테스트 버전 업로드 (initialize → presigned S3 PUT → complete)
-                                  업로드 후 versionName readback 검증
+  upload <projectDir> [--memo <메모>] [--bundle <.ait>]
+                                  공식 ait deploy 래퍼 — 테스트 버전 배포(API 키 토큰 인증)
+                                  raw S3 3-step은 콘솔 AccessDenied로 폐기. 앱 프로젝트 디렉터리를
+                                  cwd로 node_modules/.bin/ait deploy 실행, deeplink·deploymentId 보고
+                                  토큰 없으면: AIT_DEPLOY_API_KEY env로 자동 등록, env도 없으면 exit 2(요청)
+                                  --memo 미지정 시 앱 package.json version 또는 "auto"
   test-send <appName> [deploymentId]
                                   테스트 푸시 실발송(bundles/test-push) → isTested=true 확인
                                   deploymentId 생략 시 최신 버전 대상
@@ -916,10 +994,20 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
   if (sub === 'set-app-info' && flags.docs === true) {
     usageExit('--docs 플래그에는 <dir> 값이 필요합니다.', 'node ait-console.cjs set-app-info my-app --docs ./docs');
   }
+  // ---- upload: 공식 ait deploy 래퍼 — 콘솔 세션 불필요(API 키 토큰 인증), 여기서 디스패치
   if (sub === 'upload') {
-    if (!pos[1]) usageExit('upload 서브커맨드에는 <bundle.ait> 인자가 필요합니다.', 'node ait-console.cjs upload my-app ./dist/my-app.ait');
-    if (!fs.existsSync(pos[1])) usageExit(`번들 파일 없음: ${pos[1]}`);
-    if (!pos[1].endsWith('.ait')) usageExit(`번들은 .ait 파일이어야 합니다(콘솔 accept=".ait"): ${pos[1]}`);
+    const projectDir = path.resolve(pos[0]);
+    if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
+      usageExit(`앱 프로젝트 디렉터리 없음: ${projectDir}`, 'node ait-console.cjs upload /path/to/app --memo "1.0.0"');
+    }
+    if (flags.memo === true) usageExit('--memo 플래그에는 <메모> 값이 필요합니다.', 'node ait-console.cjs upload /path/to/app --memo "1.0.0"');
+    if (flags.bundle !== undefined) {
+      if (flags.bundle === true) usageExit('--bundle 플래그에는 <.ait 경로> 값이 필요합니다.');
+      if (!fs.existsSync(flags.bundle)) usageExit(`번들 파일 없음: ${flags.bundle}`);
+      if (!String(flags.bundle).endsWith('.ait')) usageExit(`번들은 .ait 파일이어야 합니다: ${flags.bundle}`);
+    }
+    await cmdUpload(projectDir, flags);
+    process.exit(0);
   }
   if (sub === 'release-watch' && flags['confirm-release'] !== true) {
     usageExit(
@@ -947,7 +1035,6 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
     if (sub === 'apps') await cmdApps(request);
     else if (sub === 'versions') await cmdVersions(request, pos[0]);
     else if (sub === 'set-app-info') await cmdSetAppInfo(request, pos[0], flags);
-    else if (sub === 'upload') await cmdUpload(request, pos[0], pos[1], flags);
     else if (sub === 'test-send') await cmdTestSend(request, pos[0], pos[1]);
     else if (sub === 'release-status') exitCode = await cmdReleaseStatus(request, pos[0]);
     else if (sub === 'release') await cmdRelease(request, pos[0]);

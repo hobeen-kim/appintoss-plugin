@@ -18,7 +18,7 @@ trigger: 콘솔 자동화, 콘솔 제출, 앱 등록, 앱 정보 등록, set-app
 | read | `versions <appName>` | 앱 번들 버전 목록 | 즉시 |
 | write | `register` | 앱 등록(이름·appName·유형) | --dry-run 선행 권장 |
 | write | `set-app-info` | 앱 정보 등록 — APP-SPEC.md 파싱 + 에셋 업로드 + draft 저장·readback 검증. **앱정보 검수 제출은 `--submit` 명시 필요** | draft까지 자동 / 검수 제출은 --submit 명시 |
-| write | `upload` | 번들 **테스트 버전** 업로드 | --dry-run 선행 권장 |
+| write | `upload` | 번들 **테스트 버전** 배포 — 공식 `ait deploy` CLI 래퍼(API 키 토큰 인증). raw S3 3-step은 AccessDenied로 폐기(deprecated). 동일 번들 재업로드(Code 4097)는 친절 안내 | 인증 토큰 필요(AIT_DEPLOY_API_KEY) |
 | write | `test-send` | 테스트 발송(테스트 버튼→"푸시 보내기") | --dry-run 선행 권장 |
 | write | `submit-review` | 검토 요청 + 노트 작성(SUBMIT.md 전재) | 사용자 명시 개시 |
 | read(크론) | `release-status` | 출시하기 활성 감지 — **클릭 금지** | 크론 호출 |
@@ -47,7 +47,8 @@ node ait-console.cjs versions <appName>
 ```
 node ait-console.cjs register --app <appName> --name <표시이름> --type <NON_GAME|GAME> [--dry-run]
 node ait-console.cjs set-app-info <appName> [--docs <docs 경로>] [--submit]
-node ait-console.cjs upload --app <appName> --bundle <path> [--dry-run]
+node ait-console.cjs upload <projectDir> [--memo <메모>] [--bundle <.ait>]
+# raw S3 3-step(initialize→PUT→complete)은 AccessDenied로 폐기 — lib/api.cjs DEPRECATED 주석 참조
 node ait-console.cjs test-send --app <appName> [--dry-run]
 node ait-console.cjs submit-review --app <appName> --docs <docs 경로> [--first|--update] [--dry-run]
 node ait-console.cjs release --app <appName>

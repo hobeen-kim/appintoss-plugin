@@ -8,8 +8,9 @@
  *
  * READ: GET endpoints from the dom-map §2 inventory.
  * WRITE: only the endpoints captured in dom-map §3-W ("캡처된 write API 목록"):
- *   deployments/initialize -> presigned S3 PUT -> deployments/complete,
- *   bundles/test-push, bundles/test-links.
+ *   bundles/test-push, bundles/test-links, resource/upload, draft, review.
+ *   (deployments/initialize -> presigned S3 PUT -> deployments/complete 는
+ *    DEPRECATED — 콘솔 AccessDenied 유발, 업로드는 공식 `ait deploy` 래퍼 사용.)
  * Credentials / cookies / tokens / presigned URLs are NEVER printed.
  */
 const crypto = require('crypto');
@@ -457,14 +458,20 @@ async function submitAppInfoReview(request, ws, _app, payload) {
   return postJson(request, EP.url.appInfoReview(ws), payload, 'mini-app/review');
 }
 
-// Upload 3-step (dom-map §3-W 단계1) — step 1: initialize.
+// ---------------------------------------------------------------- raw 업로드 3-step (DEPRECATED)
+// DEPRECATED — raw S3 3-step(initialize→presigned PUT→complete)은 표면상 CREATED여도
+// 콘솔이 번들을 읽지 못해 AccessDenied 를 유발한다. 업로드는 공식 `ait deploy` 래퍼
+// (ait-console.cjs cmdUpload, API 키 토큰 인증)를 사용할 것. 아래 3개 함수는
+// 참조용으로만 보존하며 cmdUpload 에서 더 이상 호출하지 않는다.
+
+// DEPRECATED (참조용 보존 — cmdUpload 미호출). Upload 3-step (dom-map §3-W 단계1) — step 1: initialize.
 // Returns { uploadUrl(presigned S3 — 서명 포함이라 절대 로그 금지), deployment{versionName,...} }.
 async function initializeDeployment(request, ws, app, deploymentId) {
   assertWriteDocumented('deployments/initialize');
   return postJson(request, EP.url.deployInit(ws, app), { deploymentId }, 'deployments/initialize');
 }
 
-// Upload 3-step — step 2: PUT the .ait bytes to the presigned S3 URL.
+// DEPRECATED (참조용 보존 — cmdUpload 미호출). Upload 3-step — step 2: PUT the .ait bytes to the presigned S3 URL.
 // The presigned URL carries its own query-string signature (no console cookie needed).
 async function uploadBundleToPresignedUrl(request, uploadUrl, filePath) {
   const buf = fs.readFileSync(filePath);
@@ -479,7 +486,7 @@ async function uploadBundleToPresignedUrl(request, uploadUrl, filePath) {
   if (!res.ok()) throw new Error(`[S3 PUT] presigned 업로드 실패 -> HTTP ${res.status()}`);
 }
 
-// Upload 3-step — step 3: complete (server then builds BUILDING -> CREATED).
+// DEPRECATED (참조용 보존 — cmdUpload 미호출). Upload 3-step — step 3: complete (server then builds BUILDING -> CREATED).
 async function completeDeployment(request, ws, app, deploymentId) {
   assertWriteDocumented('deployments/complete');
   return postJson(request, EP.url.deployComplete(ws, app), { deploymentId }, 'deployments/complete');

@@ -7,7 +7,7 @@
 
 | 유형 | 설명 | 테스트 ID |
 |------|------|-----------|
-| 전면형 | 화면 전체를 덮는 광고. 화면 전환 시점에 노출 | `ait-ad-test-interstitial-id` |
+| 전면형 | 화면 전체를 덮는 광고. **사용자 명시 액션(버튼) 직후 등 예측 가능한 시점에만 노출** — 로딩/인트로 등 일시 화면 노출 금지 | `ait-ad-test-interstitial-id` |
 | 보상형(리워드) | 사용자가 선택해서 시청 후 보상 수령 | `ait-ad-test-rewarded-id` |
 | 배너 리스트형 | 96px 높이 고정. 콘텐츠 하단/리스트 중간 배치 | `ait-ad-test-banner-id` |
 | 배너 피드형 | 410px 높이 고정. 피드 사이 배치 | `ait-ad-test-native-image-id` |
@@ -28,6 +28,11 @@ import {
 ```
 
 ## 전면형/리워드 광고
+
+> **필수 — 노출 시점 예측가능성 (검수 반려 직결, ait-review-checklist 110-111행)**
+> - 인트로/로딩/컷신/팝업 모달 등 **일시적 화면에 전면 광고 노출 금지** (공홈)
+> - 사용자가 **예상하기 어려운 순간에 노출 금지** — 화면 전환·navigate 직전 자동 노출, useEffect 자동 노출이 대표 위반 패턴
+> - 전면 광고는 **사용자 명시 액션(버튼 클릭)에 결합**해 예측 가능하게 노출한다(Clear Action) — 예: "결과 보기" 버튼 onClick에서 `await showAd()` 후 navigate
 
 ### 사전 로드 → 표시 패턴
 
@@ -129,6 +134,16 @@ function useFullScreenAd(adGroupId: string) {
 
   return { showAd, isLoaded: () => adLoadedRef.current };
 }
+```
+
+```tsx
+// ✅ 올바른 사용 — 사용자 명시 액션(버튼)에 결합 (예측 가능)
+<Button onClick={async () => { await showAd(); navigate('/result'); }}>결과 보기</Button>
+
+// ❌ 위반 — 로딩/분석 화면에서 자동 노출 (일시 화면 + 예측 불가, 검수 반려)
+useEffect(() => {
+  if (analysisDone) { showAd().then(() => navigate('/result')); }
+}, [analysisDone]);
 ```
 
 ### 보상형 광고

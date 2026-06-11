@@ -59,6 +59,14 @@ Phase 3(비주얼 검증)에서 점수표 + 위반 목록과 함께 반려되면
 - 다크모드 분기 구현 — **라이트모드 전용**
 - 오버엔지니어링 — `knowledge/over-engineering.md` 준수. 추측성 추상화·미사용 옵션·과도한 일반화 금지. 필요한 기능만 최소 코드로 구현한다.
 
+## 환경 구성 원칙 (test → prod 전환)
+
+.ait 번들에는 런타임 isTest 플래그·자동 스위치가 없다. test와 prod의 차이는 **config 상수 값**(광고 그룹 ID, 프로모션 코드, isTestPayment 등)뿐이다.
+
+- 이 값들을 **단일 constants 파일**(예: `src/constants/index.ts`)에 모은다 — 스왑 지점 일원화.
+- test→prod 전환 = **config 값 스왑 + 재빌드 + 재업로드**(다른 번들). 스왑 후 한 번 더 테스트 권장.
+- 광고 ID 스왑은 `ait-console ad-id-watch`가 자동화한다(ait-ads.md 참조).
+
 ## 광고 슬롯 구현
 
 - ads API 사용 전 `isSupported()` 체크를 반드시 수행한다.

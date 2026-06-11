@@ -35,6 +35,7 @@
 | `ait-docs` | 공식 문서 검색 — ax CLI 기반 Developer Center, TDS 문서 |
 | `ait-assets` | 콘솔 제출 에셋(앱 아이콘·화면 예시·썸네일) 자동 생성 |
 | `ait-setup` | 파이프라인 프로젝트 설정(.appintoss.json) 초기화 |
+| `ait-console` | 콘솔 자동화 — 앱 등록·에셋·테스트 버전·테스트 발송·검토 요청·출시(명시 명령)·비동기 watcher(release/광고 ID 발급/템플릿 심사) |
 
 ### 개발
 | 스킬 | 용도 |
@@ -49,6 +50,20 @@
 | `pipeline` | 무개입 생성 파이프라인의 페이즈·게이트·반려 규칙 단일 출처 |
 | `orchestrator` | 라우팅 보조 — 개별 작업 요청 시 에이전트/스킬 안내 |
 | `project-start` | 새 프로젝트 초기 세팅 — plan.md 작성 후 에이전트/스킬 선별 |
+
+## 환경 구성 원칙 (test → prod)
+
+.ait 번들에는 런타임 isTest 플래그·test/prod 자동 스위치가 **없다**. SDK가 제공하는 것은 isAIT 휴리스틱·`env.getDeploymentId`·`isMinVersionSupported`·`getServerTime`뿐이다.
+
+test와 prod의 차이는 **config 상수 값**으로만 구분한다:
+- 광고: 테스트 ID(`ait-ad-test-*`) vs 운영 unit ID
+- 프로모션: `TEST_{code}` vs 실 코드 (TEST_는 포인트 차감·지급 없음)
+- 토스페이: `isTestPayment: true` vs `false`
+
+따라서:
+- test→prod 전환 = **config 값 스왑 + 재빌드 + 재업로드** (테스트 번들 ≠ 출시 번들)
+- 스왑 지점은 **단일 constants 파일**(예: `src/constants/index.ts`)에 일원화한다
+- 광고 ID 스왑·재빌드·재배포는 `ait-console ad-id-watch`가 자동화; 프로모션 코드도 동일 패턴(TEST_ 제거)
 
 ## 스킬 사용 원칙
 

@@ -13,6 +13,9 @@
 | 배너 피드형 | 410px 높이 고정. 피드 사이 배치 | `ait-ad-test-native-image-id` |
 
 > **중요**: 테스트는 반드시 테스트용 ID를 사용. 운영 ID 사용 시 제재 대상.
+> 운영 광고 ID 신청은 앱 승인(hasApproved=true) 후 가능 — 그 전엔 테스트 ID 사용, 승인 후 `ad-apply`→`ad-id-watch`로 발급·스왑.
+> 운영 광고 ID 발급 후에는 `ait-console ad-id-watch`가 발급 여부를 자동 감시하여 config 상수 파일의 테스트 ID를 실 ID로 스왑하고 테스트 재배포까지 자동 처리한다.
+> **환경 전환 원칙**: 테스트→운영 전환은 런타임 분기가 아닌 **config 값 스왑 + 재빌드**다. 스왑 대상 값은 단일 constants 파일에 모은다(ait-env.md "test vs prod 구분" 참조).
 
 ## Import
 
@@ -189,6 +192,8 @@ export const FEED_AD_GROUP_ID = 'ait-ad-test-native-image-id';
 - 보상형/전면형은 AdMob+토스애즈 혼합(**토스애즈 비중 5~30%**), 배너는 토스애즈 단독 권장
 - **리워드 수령과 동시에 토스포인트 지급 불가(공식 확인)** — "리워드 적립 후 포인트 교환" 우회 구조 필수
 - `userEarnedReward` 미발화 사례 보고 — 공홈 API에는 정의돼 있으나(상단 ShowFullScreenAdEvent union 참조) 환경에 따라 이벤트가 오지 않았다는 커뮤니티 보고가 있음. 완주 판정을 이 이벤트에만 의존하지 말고 미발화 폴백(예: 종료 이벤트 + 시청 시간)을 두고 실측 검증할 것
+- 신규 광고 ID는 약 **4주 학습 기간** 필요 — 초기 eCPM 변동을 성과로 오판하지 말 것. 여러 ID를 같은 화면에서 번갈아 쓰면 학습 방해(출처: https://techchat-apps-in-toss.toss.im/t/ecpm/3926 )
+- **IAA(인앱광고) 수수료 15%는 일정 미확정** — 2026-06-01 기준 수취 보류, 공지 확인 필요(수수료 15% 근거: https://techchat-apps-in-toss.toss.im/t/4-1/3171 ; 수취 보류 근거: https://techchat-apps-in-toss.toss.im/t/topic/3985 )
 
 > 출처 (2026-06-10 수집):
 > - https://techchat-apps-in-toss.toss.im/t/ecpm/3926

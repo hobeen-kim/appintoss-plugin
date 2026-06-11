@@ -35,8 +35,9 @@ pipeline 스킬의 update 모드 정의를 따른다. 각 페이즈는 해당 �
    - 단, Phase 3' 비주얼 검증은 **변경된 화면만** 3-A/3-B/3-C로 검증한다. 3-C 패널: before/after 스크린샷을 designer·reviewer·visual-qa 3관점이 비교 검토·합의(pipeline 3-C 참조).
 5. **Phase 7'** — 에셋 갱신 (조건부)
    - **변경된 화면이 기존 화면예시 3장에 포함될 때만** 해당 화면예시를 재캡처한다. 그렇지 않으면 에셋 갱신을 생략한다.
-6. **Phase 8'** — visual-qa: `docs/REPORT-v{version}.md` 보고서 생성 (변경 화면 **before/after 비교 필수**) → 수동 모드면 경로 제시 후 **승인 대기로 종료**(사람의 유일한 개입 지점), 자동 모드면 자동 승인 후 Phase 9로 진행
-7. **Phase 9** (자동 모드 한정) — reviewer: git 커밋 + (remote 있으면) push, 결과를 보고서에 기록 (pipeline Phase 9 가드 준수)
+6. **Phase 8'** — visual-qa: `docs/REPORT-v{version}.md` 보고서 생성 (변경 화면 **before/after 비교 필수**) → 수동 모드면 경로 제시 후 **승인 대기로 종료**(사람의 유일한 개입 지점), 자동 모드면 자동 승인 후 Phase C'로 진행
+7. **Phase C'** — ait-console 스킬: `upload`(테스트 버전) → `test-send` 자동 수행(테스트 앱 한정). 각 단계 결과를 보고서 §콘솔 테스트에 기록. **테스트 발송까지만 자동. `--auto` 모드도 동일하게 테스트 발송 한정.**
+8. **Phase 9** (자동 모드 한정) — reviewer: git 커밋 + (remote 있으면) push, 결과를 보고서에 기록 (pipeline Phase 9 가드 준수)
 
 각 페이즈의 입력·산출물·게이트 기준은 pipeline 스킬에서 확인한다.
 
@@ -63,3 +64,11 @@ pipeline 스킬의 update 모드 정의를 따른다. 각 페이즈는 해당 �
 ```
 보고서: {프로젝트 절대경로}/docs/REPORT-v{version}.md · 커밋: {해시}({브랜치}, push {여부})
 ```
+
+## 광고·프로모션 점검
+
+update 실행 시 **광고 적용 여부를 점검**한다 — 광고(최소 배너)가 없거나 부족하면 광고 추가를 변경 후보에 포함시킨다. 보상형 광고·프로모션 도입이 주제에 적합하면 함께 제안한다(프로모션 제안 시 `ait-promotion-reward` 스킬 "프로모션 ROI 검토" 절 적용).
+
+## 출시 별도 안내
+
+**출시는 별도다.** 사용자가 "출시해라"라고 하면 `ait-console submit-review → release-watch` 체인을 시작한다. 파이프라인·`--auto` 모드에서 출시를 자동 수행하지 않는다.

@@ -38,7 +38,7 @@ update 실행은 `skills/pipeline/SKILL.md`의 update 모드·게이트·반려 
 1. **백로그 확인 (소비 우선)** — `docs/IMPROVE-BACKLOG.md`가 있고 유효(미적용·미무효) 후보가 남아 있으면 **재진단을 생략**하고 ROI 최상위 후보 1건을 꺼내 4번으로 바로 진행한다. 백로그가 없거나 소진(전부 적용·무효)됐을 때만 2~3번 재진단을 수행한다.
 2. **대상 로드 + 스펙 복원** — 대상 앱의 `src/`(코드)를 1차로 읽는다. `PLAN.md`·`DESIGN.md`가 있으면 로드하고, **없으면 코드 역분석으로 스펙을 복원**한다(update Phase 0' 규칙 재사용). 직전 `docs/IMPROVE-LOG.md`·`docs/REPORT-v*.md`는 있으면 참고만.
 3. **축별 직접 진단** — `--focus`가 특정 축이면 그 축만, `auto`면 3축 전부 진단한다. **보조 파일 부재는 진단을 막지 않는다 — 직접 측정으로 근거를 만든다.** `--metrics`가 입력되면 feature·uiux 진단에서 실측 지표를 1차 근거로 우선 사용한다(예: 크래시율 높은 OS 대응, 로딩 P99 악화 화면 개선, eCPM·CTR 기반 광고 배치 — 단 `ait-ads.md` 정량 기준 미달 표본은 판단 보류).
-   - feature: 코드 역분석으로 현재 기능 목록 파악 → WebSearch 트렌드(`knowledge/toss-user-insights.md` 휴리스틱) 대비 스펙 갭 도출
+   - feature: 코드 역분석으로 현재 기능 목록 파악 → WebSearch 트렌드(`knowledge/toss-user-insights.md` 휴리스틱) 대비 스펙 갭 도출. **광고 미적용/부족 시 광고 추가(최소 배너) 제안을 후보에 포함**하고, 보상형 광고·프로모션·출석 도입이 적합하면 함께 제안(프로모션 제안 시 ROI 검토 — `ait-promotion-reward` 스킬 "프로모션 ROI 검토" 절 적용)
    - uiux: **dev 서버(`granite dev`/`vite`) 기동 → Playwright로 전 화면 스크린샷(318×524 @2x) + axe-core 스캔** → 비주얼 루브릭·접근성·트렌드 디자인 대비 약점 측정 (REPORT 있으면 직전 점수와 비교)
    - quality: `npx tsc -b --noEmit`·`lint` 실행 + 번들 크기(`du`/빌드) + `ait-review` 11단계 직접 점검 → 잔여 리스크 도출
 

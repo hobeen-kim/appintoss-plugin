@@ -74,6 +74,81 @@ const handleShare = async () => {
 - 온보딩 완료 시 보너스 기능 해금
 ```
 
+## 프로모션 (토스포인트 직접 지급)
+
+비게임 앱 대상으로 서버 없이 SDK 함수 호출만으로 사용자에게 토스포인트를 직접 지급할 수 있다.
+
+### 요건
+- SDK(WebView/React Native): **v2.0.8 이상**
+- 토스앱: **v5.232.0 이상** (미만 버전에서는 `undefined` 반환)
+- **앱 승인(hasApproved) 후 신청 가능** — 앱이 출시 승인된 상태여야 프로모션 신청 진행 가능 (ait-console ad-apply와 동일한 승인 게이트)
+
+### 신청 선행 조건
+
+프로모션 신청 전 아래 조건을 모두 충족해야 한다:
+
+1. 대표 관리자 약관 동의
+2. **비즈 월렛 최소 30만원 충전** — 프로모션 지급 재원
+3. 사업자 정보 등록
+4. 정산 정보 검토 완료
+5. 앱 승인(hasApproved) 완료 (위 승인 게이트 참고)
+
+### promotionCode
+
+콘솔에서 프로모션을 등록하면 자동 생성되는 고유 식별자. 개발 코드에서 이 값을 직접 참조한다.
+
+### 테스트 코드 컨벤션 (핵심)
+
+테스트 단계에서는 실제 프로모션 코드 앞에 **`TEST_` 접두사**를 붙여 사용한다.
+
+| 환경 | promotionCode 형식 | 포인트 차감 여부 |
+|------|-------------------|----------------|
+| 테스트 | `TEST_PROMO_001` | **없음 (실제 지급 없음)** |
+| 운영 | `PROMO_001` | 차감됨 |
+
+- 광고 테스트 ID와 동일한 패턴 — 테스트 시 포인트 차감·실제 지급 없음
+- 테스트는 최소 1회 `resultType: SUCCESS` 확인 후 운영 전환
+- **환경 전환 원칙**: TEST_ 제거는 런타임 분기가 아닌 **config 값 스왑 + 재빌드**다. 스왑 값은 단일 constants 파일에 모은다(ait-env.md "test vs prod 구분" 참조).
+
+### SDK 직접 지급 방식
+
+```tsx
+import { grantPromotionReward } from '@apps-in-toss/web-framework';
+
+// 비게임 앱 전용 — SDK 2.0.8+, 토스앱 5.232.0+ 필수
+// 테스트: TEST_{promotionCode} (포인트 차감·실제 지급 없음)
+// 운영:   콘솔에서 발급된 promotionCode 그대로 사용
+const result = await grantPromotionReward({
+  promotionCode: 'TEST_PROMO_001', // 테스트=TEST_{promotionCode}, 운영=발급코드
+  amount: 100, // 지급 포인트 (1인당 최대 5,000 토스포인트)
+});
+```
+
+### 지급 한도
+
+- **1인당 최대 5,000 토스포인트** — 초과 지급 불가
+
+### 운영 흐름
+
+```
+1. 콘솔에서 프로모션 등록 (promotionCode 자동 생성)
+   ↓
+2. 검토 요청 제출
+   ↓
+3. 테스트 단계: TEST_{promotionCode} 로 최소 1회 호출 → resultType: SUCCESS 확인
+   ↓
+4. 시작하기 (운영 전환)
+```
+
+- 기존 Server-to-Server API 호출 방식도 병행 지원 (무결성이 중요한 경우 S2S 권장)
+- SDK 직접 호출 시 중복 지급 방지 방어 로직 필수 구현
+- 예산 80% 소진 시 이메일 알림, 100% 소진 시 지급 자동 중단
+
+<!-- [공홈 검증] 2026-06-11: grantPromotionReward(비게임), SDK 2.0.8+, 토스앱 5.232.0+ 요건
+  공홈(developers-apps-in-toss.toss.im/promotion/develop.md, /bedrock/reference/framework/비게임/promotion.md) 확인 완료.
+  출처: https://techchat-apps-in-toss.toss.im/t/sdk/3102 (2026-03-23)
+  출처: https://developers-apps-in-toss.toss.im/promotion/intro.html (2026-06-11) -->
+
 ## 인앱결제 (IAP) 연동
 
 ### 필수 API
@@ -110,6 +185,31 @@ for (const order of orders) {
 - 샌드박스에서 테스트 불가 — 토스 앱에서 실제 결제 발생
 - `processProductGrant`에서 반드시 서버에 지급 기록
 - 앱 시작 시 `getPendingOrders()`로 미처리 주문 확인 필수
+
+## 프로모션 ROI(비용대비 수익) 검토
+
+프로모션 도입 결정 전에 아래 프레임워크로 손익분기를 추정한다. 결론("도입" 또는 "보류")을 `PLAN.md` '수익 모델' 섹션에 기록한다.
+
+### 비용
+
+- 토스포인트/리워드 지급액: 인당 보상(최대 5,000P) × 예상 참여자 수
+- **비즈 월렛 선충전 필수**: 최소 30만원 충전 후 신청 가능 — 초기 자본 비용으로 반드시 계산에 포함
+- 운영 비용: 프로모션 코드 발급·서버 처리·예산 관리 부담
+
+### 수익
+
+- 리텐션 상승 → 광고 임프레션 증가분: eCPM × 추가 노출 수
+  - `ait-ads.md` eCPM 정량 기준 참조: 일 1만 노출 이전에는 최적화 판단 보류
+  - 배너/전면/보상형 eCPM 실측 범위 참고
+- 보상형 광고 시청 수익: 리워드 광고 완료 수 × 보상형 eCPM
+
+### 판정
+
+손익분기 추정: **보상 지급액 < 추가 광고 수익(추정)?**
+- 예(초과 가능성 있음) → **도입** 결론
+- 아니오(손실 예상) → **보류** 결론
+
+> 사행성·실금전 보상 금지 원칙은 ROI와 무관하게 항상 유지한다.
 
 ## 수익화 구현 권장 순서
 

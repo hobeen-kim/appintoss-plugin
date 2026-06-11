@@ -7,7 +7,7 @@ description: 앱인토스 미니앱 무개입 생성 파이프라인의 페이�
 
 이 문서는 앱인토스 미니앱을 사람 개입 없이 생성·갱신하는 파이프라인의 **단일 출처(Single Source of Truth)** 다. `create`/`update` 커맨드와 모든 에이전트(planner, designer, reviewer, app-developer, back-developer, visual-qa)는 이 스킬에 정의된 페이즈·게이트·반려 규칙을 그대로 따른다. 이 명세에 없는 페이즈를 임의로 추가하지 않는다.
 
-대상 범위: 미니앱 소스 생성 → 정적·비주얼 검증 → 빌드(`.ait`) → 검수 셀프체크 → 스토어 에셋 생성까지. **다크모드, 실배포, 앱빌더(Deus) 자동화는 이 파이프라인의 범위가 아니다.**
+대상 범위: 미니앱 소스 생성 → 정적·비주얼 검증 → 빌드(`.ait`) → 검수 셀프체크 → 스토어 에셋 생성까지. **다크모드, 앱빌더(Deus) 자동화는 이 파이프라인의 범위가 아니다.** create/update 종료 시 `ait-console` 스킬로 콘솔 테스트 단계(앱 등록·에셋 업로드·테스트 버전 업로드·테스트 발송)까지 자동 수행한다. 검토 요청·출시는 사용자 명시 "출시해라" 명령에서만 — **파이프라인은 출시를 자동 수행하지 않는다.**
 
 ---
 
@@ -47,6 +47,8 @@ description: 앱인토스 미니앱 무개입 생성 파이프라인의 페이�
 
 ait/granite CLI는 전역 설치가 아니라 프로젝트 로컬이다. preflight 단계에서 `npm install`을 수행한 뒤 `node_modules/.bin/ait`가 존재하는지 확인한다. **빌드는 `npx ait build`** — 구 `granite build`는 웹 프로젝트에서 폐기되었다(실측 2026-06-07, 'no longer supported' 에러). dev 서버는 `granite dev` 또는 `vite`를 사용한다.
 
+> **앱 사전 등록 권고**: 개발 착수 전 콘솔에서 앱을 미리 등록하면 심사 대기를 병렬화할 수 있다. 2026-05-14 등록 간소화로 이름·appName·유형만 입력하면 등록 가능 (출처: https://toss.im/apps-in-toss/blog/update-26-5-14 ). 필수 조건은 아니며 권고 사항이다.
+
 ---
 
 ## 2. create 모드 페이즈 정의 (Phase 0~7)
@@ -58,14 +60,14 @@ ait/granite CLI는 전역 설치가 아니라 프로젝트 로컬이다. preflig
 | 입력 | 사용자 주제 |
 | 산출물 | `PLAN.md` (토스 적합 컨셉 + YAGNI 기능 정의 — 필요한 기능만, 추측성 기능 금지 + 수익 모델) |
 | 담당 에이전트 | **planner ⇄ designer·reviewer (브레인스토밍 라운드)** |
-| 정책 사전필터 | 금융상품 추천 금지 · 자사앱 설치 유도 금지 · 주요기능 외부의존 금지 |
-| 게이트 | `PLAN.md` 존재 + 정책 충돌 0건 + **designer·reviewer 컨셉 합의** |
+| 정책 사전필터 | 금융상품 추천 금지 · 자사앱 설치 유도 금지 · 주요기능 외부의존 금지 · 연령등급 고려(만 14세+ 틴즈 노출 — 청소년 부적합 콘텐츠·과금 설계 점검) |
+| 게이트 | `PLAN.md` 존재 + 정책 충돌 0건 + **designer·reviewer 컨셉 합의** + **수익 모델에 광고 필수 포함(최소 배너 배치 명시)** — 광고 미포함이면 게이트 보완 |
 
 Phase 0은 planner가 주제를 토스 사용자층·행태에 맞춰 구체화하고, designer·reviewer가 코멘트로 검증하는 **브레인스토밍 라운드**로 진행한다. 서브에이전트끼리는 직접 통신할 수 없으므로, 라운드는 **오케스트레이터(커맨드 실행 주체)가 코멘트를 중계**한다(Phase 1의 designer⇄reviewer 크리틱 루프와 동일 패턴).
 
 **브레인스토밍 라운드 규칙**:
 
-1. **planner 컨셉 초안** — planner가 주제를 `knowledge/toss-user-insights.md`를 기반으로 구체화한다. 타겟 세그먼트, 토스 행태에 맞춘 기능 후보, 차별 컨셉 **2~3안**을 담은 컨셉 초안을 작성한다.
+1. **planner 컨셉 초안** — planner가 주제를 `knowledge/toss-user-insights.md`를 기반으로 구체화한다. 타겟 세그먼트, 토스 행태에 맞춘 기능 후보, 차별 컨셉 **2~3안**을 담은 컨셉 초안을 작성한다. PLAN.md에 핵심 전환 지표 1개 + 보조 지표 2개 포함(ait-analytics 스킬 기준).
 2. **양측 코멘트** — 오케스트레이터가 초안을 designer·reviewer에 전달한다. designer는 UX 관점 코멘트(시그니처 모먼트 가능성, 화면 흐름 적합성), reviewer는 정책·검수 관점 코멘트(콘텐츠 제한·외부의존 리스크)를 각자 제시한다. 코멘트만 제시하며 컨셉 결정권은 planner에 있다.
 3. **planner 수렴** — planner가 코멘트를 반영해 **1안으로 수렴**한다. designer·reviewer 양측이 명시적으로 동의하면 `PLAN.md`를 확정한다.
 4. **최대 2라운드** — 1라운드에서 합의되지 않으면 코멘트를 반영해 2라운드를 진행한다. 2라운드에서도 미합의면 **planner 최종안으로 확정**하되, 미합의 쟁점을 `PLAN.md`에 기록한다.
@@ -206,6 +208,10 @@ Phase 3은 세 파트로 구성된다. 세 파트 모두 통과해야 게이트�
 
 `npx ait build` 성공으로 `.ait`를 생성한다. 빌드 실패 또는 100MB 초과는 [에러 처리 표](#6-에러-처리-표) 참조.
 
+> **운영 전환**: test→prod 전환은 `src/constants/index.ts` 등 단일 constants 파일의 config 값(광고 ID·프로모션 코드·isTestPayment 등)을 스왑한 뒤 **재빌드·재업로드**로 처리한다(런타임 플래그 없음 — 테스트 번들 ≠ 출시 번들). 광고 ID 스왑은 `ait-console ad-id-watch` 자동화 사용.
+
+> **캐싱 주의**: 배포 후 구버전이 최대 30일 캐싱될 수 있으므로, 콘솔에서 신규 버전 강제 배포(즉시 적용)를 수동으로 실행해야 한다 (출처: https://techchat-apps-in-toss.toss.im/t/topic/781 ).
+
 ### Phase 6 — 검수 셀프체크
 
 | 항목 | 내용 |
@@ -258,6 +264,48 @@ Phase 3은 세 파트로 구성된다. 세 파트 모두 통과해야 게이트�
 위 예외에서는 자동 모드라도 Phase 9로 진행하지 않고 현재 산출물 + 사유를 보고한다.
 
 **실행 경험 저장(Honcho)**: 실행 중 발견한 공홈 문서 드리프트, 반복된 반려 패턴, 트러블슈팅 교훈은 Honcho 메모리에 conclusion으로 저장한다 (`mcp__plugin_honcho_honcho__create_conclusion`, observer_id: claude, observed_id: hobeen — 1~2문장, 다음 실행의 정확도 향상 목적). Honcho 도구가 없는 세션에서는 생략하고 보고서 §7에 기록만 남긴다.
+
+### Phase C — 콘솔 테스트 (create 모드, Phase 8 직후 자동 수행)
+
+| 항목 | 내용 |
+|---|---|
+| 입력 | `.ait` 번들, `docs/assets/`, `docs/SUBMIT.md` |
+| 산출물 | 콘솔 등록·에셋·테스트 버전·테스트 발송 완료 상태, 각 단계 결과를 보고서에 기록 |
+| 담당 스킬 | `ait-console` |
+| 게이트 | `test-send` 성공(단말 푸시 발송 요청 완료) |
+
+Phase 8 보고서 생성 직후 `ait-console` 스킬을 통해 콘솔 테스트 단계를 자동 수행한다:
+
+1. **register** — 동일 appName이 콘솔에 없으면 앱 등록(이름·appName·유형)
+2. **upload-assets** — `docs/assets/` 아이콘·화면예시·썸네일 업로드
+3. **upload** — 번들을 테스트 버전으로 업로드
+4. **test-send** — 테스트 발송("푸시 보내기") 실행
+
+각 단계의 성공·실패 결과는 `docs/REPORT-v{version}.md`의 §콘솔 테스트 단계에 기록한다. 단계 실패 시 실패 단계명·스크린샷 경로를 보고서에 남기고 계속 진행하지 않는다.
+
+**Phase C는 테스트 발송까지만 자동이다. 검토 요청·출시는 자동 수행하지 않는다.**
+
+### Phase C' — 콘솔 테스트 (update 모드, Phase 8' 직후 자동 수행)
+
+Phase C와 동일하되 register·upload-assets를 생략하고 upload(테스트 버전) → test-send만 수행한다. 결과는 update 보고서에 기록한다.
+
+---
+
+### 출시 상태머신·비동기 watcher (별도 명령 — 파이프라인 자동 단계 아님)
+
+아래 단계는 파이프라인이 자동 호출하지 않는다. 사용자가 "출시해라"라고 명시 명령할 때만 개시한다:
+
+| 명령 | 설명 |
+|---|---|
+| `ait-console submit-review` | 검토 요청 버튼 클릭 + SUBMIT.md 출시/업데이트 노트 전재 |
+| `ait-console release-watch` | 심사 APPROVED 폴링 → 활성 시 release 실행 (1시간 간격 크론) |
+| `ait-console ad-apply` | 광고 unit ID 신청 |
+| `ait-console ad-id-watch` | 광고 ID 발급 감지 → config 스왑·재빌드·테스트 재배포 |
+| `ait-console template-watch` | 기능성 템플릿 심사 통과 감지 → 발송 활성화 알림 |
+
+**자동 출시 금지 — release·release-watch는 사용자 명시 명령 개시 체인에서만 실행한다.**
+
+---
 
 ### Phase 9 — git 자동 푸시 (자동 모드 한정, 신규)
 
@@ -413,8 +461,8 @@ create/update 시작 시 대상 디렉토리에 `PIPELINE-LOG.md`가 있으면:
 
 ```
 preflight (PIPELINE-LOG.md 있으면 재개 판정 — 마지막 판정:PASS + 산출물 실재 시 다음 페이즈부터 재개)
-  └─ create:  Phase 0 기획 → 1 디자인 → 2 구현(API 주제는 서버 스모크) → 3 비주얼검증(3-A 외관+3-B 동작+a11y axe-core 스캔+3-C 패널합의) → 4 정적검사 → 5 빌드 → 6 검수셀프체크(APP-SPEC.md 전체 마스터+SUBMIT.md 최소 문서=출시/업데이트 노트+앱 내 기능 생성) → 7 스토어에셋 → 8 완료보고·승인게이트 → [자동 모드만] 9 git 자동푸시
-  └─ update:  Phase 0' 영향분석(+before캡처) → 1' 스펙갱신 → 2'~6'(create 동일, API 주제는 서버 스모크, Phase 3'은 변경화면만 3-A/3-B/a11y/3-C, 3-C는 before/after 패널 비교, 6'에서 APP-SPEC.md+SUBMIT.md 갱신) → 7' 에셋갱신(조건부) → 8' before/after 비교보고·승인게이트 → [자동 모드만] 9 git 자동푸시
+  └─ create:  Phase 0 기획 → 1 디자인 → 2 구현(API 주제는 서버 스모크) → 3 비주얼검증(3-A 외관+3-B 동작+a11y axe-core 스캔+3-C 패널합의) → 4 정적검사 → 5 빌드 → 6 검수셀프체크(APP-SPEC.md 전체 마스터+SUBMIT.md 최소 문서=출시/업데이트 노트+앱 내 기능 생성) → 7 스토어에셋 → 8 완료보고·승인게이트 → C 콘솔 테스트(ait-console: register→upload-assets→upload→test-send 자동, 테스트 발송까지만) → [자동 모드만] 9 git 자동푸시
+  └─ update:  Phase 0' 영향분석(+before캡처) → 1' 스펙갱신 → 2'~6'(create 동일, API 주제는 서버 스모크, Phase 3'은 변경화면만 3-A/3-B/a11y/3-C, 3-C는 before/after 패널 비교, 6'에서 APP-SPEC.md+SUBMIT.md 갱신) → 7' 에셋갱신(조건부) → 8' before/after 비교보고·승인게이트 → C' 콘솔 테스트(ait-console: upload→test-send 자동, 테스트 발송까지만) → [자동 모드만] 9 git 자동푸시
 
 게이트 미통과 → 원인 페이즈로 반려 (동일 페이즈 5회 초과 시 중단·보고)
 Phase 8/8' 승인 게이트 — 수동 승인(기본): 보고서 생성 후 사용자 승인 대기로 종료(파이프라인 자동 진행 중단, 사람의 유일한 개입 지점) / 자동 모드(--auto): 자동 승인 후 Phase 9 git 자동푸시로 진행

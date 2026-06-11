@@ -1,5 +1,28 @@
 # Changelog
 
+## 3.0.0 (2026-06-11)
+- test/prod 환경 구성 원칙(config 값 스왑) 명문화: 런타임 isTest 플래그 없음·단일 constants 파일 스왑+재빌드로 전환 — ait-env.md·skill-guide·app-developer·planner·ait-ads·ait-promotion-reward·pipeline 동기화
+- ait-console 완전 자동화: 단일 진입점 서브커맨드 13종(apps/versions/register/upload-assets/upload/test-send/submit-review/release-status/release/release-watch/ad-apply/ad-id-watch/template-watch)
+- 쿠키 세션·storageState 영속·headless(2FA 실감지 시만 headed), 콘솔 내부 API 우선·DOM 폴백 하이브리드
+- **create/update 파이프라인 통합(테스트 발송까지 자동)**: create 끝 register→upload-assets→upload→test-send, update 끝 upload→test-send 자동 수행
+- **출시 상태머신(사용자 명시 명령 개시·자동 출시 금지)**: submit-review → release-watch 체인은 사용자 "출시해라" 명시 명령에서만 개시
+- **콘솔 비동기 작업 cron watcher 일반화(async-watch)**: release-watch(APPROVED 폴링→출시하기), ad-id-watch(광고 ID 발급 감지→테스트 ID 스왑→재빌드→테스트 재배포), template-watch(템플릿 심사 통과 감지→발송 활성화 알림). 기본 1시간 폴링·API 우선 감지
+- 테스트 앱(today-lucky-draw) 한정 write 정책
+- 외부 심사 게이트로 일부 항목(검토 요청 폼/출시하기/광고 신청/템플릿 감지) 재캡처 대기: dom-map 갱신 후 이어서 구현 가능
+- pipeline/SKILL.md Phase C/C' 콘솔 테스트 신설, 출시·watcher는 별도 명시 명령 분리 서술
+- skill-guide에 ait-console 1행 추가(22번째 스킬)
+- 수익화 정책 전환(광고 필수·프로모션 제안·ROI 검토·improve/update 반영)
+- 프로모션 TEST_ 코드 컨벤션·비즈월렛·지급한도 반영 (출처: promotion/intro.html 2026-06-11)
+- 에셋 다양성·텍스트 선택화: 썸네일 텍스트 선택화(비주얼-only 허용·카피 강제 금지), 컴포지션 아키타입 4종(직전 앱과 재사용 금지), 토스블루 기본 사용 금지(앱 도메인 팔레트 도출)
+
+## 2.25.0 (2026-06-11)
+- 공식 정책 드리프트 정합화: 검수 기간 최초 최대 7영업일/재검토 3영업일(2026-03-18 변경) 교체, 포인트 카테고리 신설(2026-06-16 시행) 반영, 혐오·차별 콘텐츠 10종 검수 항목 추가, 틴즈(만 14세+) 연령등급 고려를 Phase 0·검수에 추가
+- toss-user-insights 보강: 성공 사례 실측 7건(용사단 키우기·두쫀쿠맵·점신 등), 카테고리 포화도 매트릭스(블루오션/검증·경쟁/포화·위험) 신설, 통합 미니앱 홈·앱 상세 페이지 환경 변화 휴리스틱 추가
+- 수익화 최신화: IAP 정기결제(구독) 공홈 확인·문서화(메서드 3종), SDK 2.6.2 구독 콜백 버그·복구 패턴(getPendingOrders), 비게임 토스포인트 직접 지급(grantPromotionReward, SDK 2.0.8+) 보강, 신규 광고 ID 4주 학습 기간·수수료 현황 갱신
+- 신규 콘솔 기능 통합: 전환 지표 설계 가이드(핵심 1+보조 2, ait-analytics)와 Phase 0·APP-SPEC 연결, 기능성 메시지(콘솔 발송) 가이드 신설, 고객센터 통합 운영 안내
+- 검수·운영 실전 노하우: 구버전 캐싱(최대 30일) 대응 콘솔 강제 배포 단계, 앱 사전 등록 권고(심사 대기 병렬화), 샌드박스≠실환경 경고
+- ait-console(콘솔 제출 자동화) spike 착수 — 콘솔 DOM 실사 보류 상태(스크립트만 포함), 후속 버전에서 완성 예정
+
 ## 2.24.1 (2026-06-10)
 - 기존 프로젝트 마이그레이션 절 추가 — 구 단일파일 SUBMIT.md를 감지하면 손수 작성 내용(스토어 정보·로그인 동의항목·스마트발송 문구·업데이트 노트 history)을 APP-SPEC로 먼저 이관한 뒤 SUBMIT을 슬림화(유실 방지). update/create 커맨드 출력에 APP-SPEC.md 경로 추가
 

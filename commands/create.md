@@ -33,8 +33,9 @@ pipeline 스킬의 create 모드 정의를 따른다. 각 페이즈는 해당 �
 7. **Phase 5** — reviewer
 8. **Phase 6** — reviewer
 9. **Phase 7** — visual-qa
-10. **Phase 8** — visual-qa: `docs/REPORT-v{version}.md` 보고서 생성 → 수동 모드면 경로 제시 후 **승인 대기로 종료**(사람의 유일한 개입 지점), 자동 모드면 자동 승인 후 Phase 9로 진행
-11. **Phase 9** (자동 모드 한정) — reviewer: git 커밋 + (remote 있으면) push, 결과를 보고서에 기록 (pipeline Phase 9 가드 준수)
+10. **Phase 8** — visual-qa: `docs/REPORT-v{version}.md` 보고서 생성 → 수동 모드면 경로 제시 후 **승인 대기로 종료**(사람의 유일한 개입 지점), 자동 모드면 자동 승인 후 Phase C로 진행
+11. **Phase C** — ait-console 스킬: `register`(미등록 시) → `upload-assets` → `upload`(테스트 버전) → `test-send` 자동 수행(테스트 앱 한정). 각 단계 결과를 보고서 §콘솔 테스트에 기록. **테스트 발송까지만 자동. `--auto` 모드도 동일하게 테스트 발송 한정.**
+12. **Phase 9** (자동 모드 한정) — reviewer: git 커밋 + (remote 있으면) push, 결과를 보고서에 기록 (pipeline Phase 9 가드 준수)
 
 각 페이즈의 입력·산출물·게이트 기준은 pipeline 스킬에서 확인한다.
 
@@ -67,6 +68,10 @@ pipeline 스킬의 create 모드 정의를 따른다. 각 페이즈는 해당 �
 ```
 보고서: {프로젝트 절대경로}/docs/REPORT-v{version}.md · 커밋: {해시}({브랜치}, push {여부})
 ```
+
+## 출시 별도 안내
+
+**출시는 별도다.** 사용자가 "출시해라"라고 하면 `ait-console submit-review → release-watch` 체인을 시작한다. 파이프라인·`--auto` 모드에서 출시를 자동 수행하지 않는다.
 
 ## 중단 예외
 

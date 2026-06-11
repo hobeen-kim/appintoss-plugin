@@ -203,7 +203,8 @@ DOM 진입: `/meta` → **`수정하기`** → 2탭 폼(기본 정보 / 카테�
 
 ### 단계 1) 버전 업로드 — **[DEPRECATED: raw S3 3-step — AccessDenied로 폐기]** / 현재: `ait deploy` CLI 래퍼 사용
 
-> **현행 방식**: `ait-console.cjs upload <projectDir>` → `node_modules/.bin/ait deploy -m <memo>` 실행(API 키 토큰 인증). deeplink·deploymentId를 stdout으로 보고. 동일 번들 중복 업로드는 Code 4097로 거부되며 친절 안내 출력.
+> **현행 방식**: `ait-console.cjs upload <projectDir>` → `node_modules/.bin/ait deploy` 실행(API 키 토큰 인증). deeplink·deploymentId를 stdout으로 보고. 동일 번들 중복 업로드는 Code 4097로 거부되며 친절 안내 출력.
+> **memo 실측(issue #1, 2026-06-11)**: 라이브 `ait deploy` 시그니처는 `[--api-key] [--workspace] [--profile] [--base-url] [--location] [--scheme-only]` — **`-m`/`--memo` 없음**(부착 시 `Unknown Syntax Error: Unsupported option name ("-m")`로 전면 실패). upload는 `ait deploy --help` 출력에서 지원 감지 시에만 `-m`을 부착한다(미지원이면 콘솔 메모 미입력 — versionName으로 식별).
 > **아래 raw S3 3-step 기록은 deprecated 참조 보존용** — AccessDenied로 인해 폐기됨. lib/api.cjs에도 DEPRECATED 주석 유지.
 
 ### [deprecated 참조] 버전 업로드 — **API 3-step + presigned S3 PUT**
@@ -228,10 +229,11 @@ DOM 진입: `/app-build` → (버전 0개면) 본문 "첫 버전을 등록하고
 - **활성 감지**: `:disabled`/`aria-disabled`. 업로드 직후(`isTested=false`) `disabled=true`, 테스트 푸시 후(`isTested=true`) `disabled=false`로 전이 — 둘 다 실측.
 - 권장: `getByRole('button',{name:'검토 요청'}).disabled` 평가, 또는 bundles API의 `isTested`로 DOM 없이 판정.
 
-### 단계 4) 검토 요청 제출 + 출시노트 폼 — **게이트 A로 차단 (앱 정보 검토 선행 필요)**
-- isTested=true로 "검토 요청"을 실제 클릭했으나, **출시노트 폼 대신 차단 다이얼로그**가 떴음: `[role=dialog]` 텍스트 **"앱 정보 검토를 먼저 완료해 주세요 / 앱 정보가 승인되어야 앱을 출시할 수 있어요"**, 버튼 `닫기`·`이동하기`(→ `/meta`). 폼에 textarea/contenteditable 0개(폼 미진입).
+### 단계 4) 검토 요청 제출 + 출시노트 폼 — **DOM 실측 확보·API 미캡처(자동 캡처 예정)**
+- 게이트 A 차단 시(앱 정보 미승인): isTested=true로 "검토 요청" 클릭 시 **출시노트 폼 대신 차단 다이얼로그**: `[role=dialog]` 텍스트 **"앱 정보 검토를 먼저 완료해 주세요 / 앱 정보가 승인되어야 앱을 출시할 수 있어요"**, 버튼 `닫기`·`이동하기`(→ `/meta`). 폼에 textarea/contenteditable 0개(폼 미진입).
 - 원인 확정: `GET /mini-app/{app}` `hasApproved=false, hasInReview=true` — 앱 정보(meta)가 토스 심사 중이라 미승인. **버전 검토 요청 전에 앱 정보 검토가 APPROVED 되어야 함.**
-- 따라서 출시노트 textarea 셀렉터·검토 제출 API는 **미확인(BLOCKED by 게이트 A)** — meta 승인 후 재실측 필요. (참고: 기존 출시 앱들의 bundles `releaseNote`가 이 폼의 산출물.) 작성 준비한 출시노트(미제출): "오늘의 소비 뽑기" 소개 4줄(느낌표·과장·부정나열 없음) — `dumps-write/review-result.json`에 보관.
+- **실측(issue #1, 2026-06-11) — 게이트 통과 시 정상 폼**: 행별 **"검토 요청"** 버튼 → **"검토 요청하기" 모달**(출시 노트 textarea, placeholder "1. 프로필 화면에서 버튼 클릭 시 반응이 없던 문제 수정") → **"확인"/"검토 요청하기" 2버튼**. `cmdSubmitReview`가 이 DOM 경로로 제출을 구현 — **검토 제출 API는 첫 라이브 제출 시 네트워크 캡처로 자동 기록**(`dumps-write/review-submit-capture.json`, 본 절 갱신용). (참고: 기존 출시 앱들의 bundles `releaseNote`가 이 폼의 산출물.) 작성 준비한 출시노트(미제출): "오늘의 소비 뽑기" 소개 4줄 — `dumps-write/review-result.json`에 보관.
+- **검토 요청 취소 실측(issue #1, 2026-06-11)**: 검토중 버전 행에 **"요청 취소"** 버튼 존재 — 클릭 시 상태 **"검토 중" → "요청 취소됨"** 전이. `cancel-review` 서브커맨드가 구현(API는 첫 라이브 취소 시 `dumps-write/cancel-review-capture.json` 자동 기록).
 
 ### 단계 5) "출시하기" 버튼 — 현재 미노출 (release-watch 크론용 감지)
 - 버전 0개일 때 `/app-build`에는 출시/테스트/검토 버튼이 **렌더 안 됨**(release-buttons=[]). 버전 ≥1이어야 행 액션 노출.
@@ -255,10 +257,11 @@ DOM 진입: `/app-build` → (버전 0개면) 본문 "첫 버전을 등록하고
 | 카테고리 마스터 조회 | `GET /impression/category-list` | 쿠키 | → 그룹/카테고리/서브카테고리 트리 | **가능** |
 | 앱 정보 임시저장(카테고리 포함) | `PUT /workspaces/{ws}/mini-app/{app}/draft` | 쿠키 | impression 은 `{keywordList, categoryIds[], subCategoryIds[]}` (단계 0-B 참조) | **가능** |
 | **앱 정보 검토 제출** | `POST /workspaces/{ws}/mini-app/review` | 쿠키 | `{workspaceId, miniApp{...}, impression{keywordList,categoryIds,subCategoryIds}}` → `{miniAppId}`; readback `hasInReview=true` | **가능** |
-| 버전 검토 요청 제출 | (미확인 — 게이트 A 차단: 앱 정보 승인 대기) | 쿠키(추정) | releaseNote 포함(추정) | 미확인 |
-| 출시하기 | (미확인 — 버튼 미노출) | 쿠키(추정) | (미확인) | 미확인 |
+| 버전 검토 요청 제출 | DOM 실측 확보(issue #1: "검토 요청"→"검토 요청하기" 모달) · API 미캡처 — 첫 라이브 제출 시 `dumps-write/review-submit-capture.json` 자동 기록 | 쿠키(추정) | releaseNote(textarea) 포함 | DOM 가능 / API 자동 캡처 예정 |
+| 출시하기 | DOM 클릭 구현(`출시하기` 버튼, APPROVED 후 노출) · API 미캡처 — 첫 라이브 출시 시 `dumps-write/release-capture.json` 자동 기록 | 쿠키(추정) | (미확인) | DOM 가능 / API 자동 캡처 예정 |
+| 검토 요청 취소 | DOM 실측 확보(issue #1: 검토중 행 "요청 취소" 버튼, "검토 중"→"요청 취소됨") · API 미캡처 — 첫 라이브 취소 시 `dumps-write/cancel-review-capture.json` 자동 기록 | 쿠키(추정) | (미확인) | DOM 가능 / API 자동 캡처 예정 |
 
-> 앱 생성·업로드(3-step, content-type=application/zip)·테스트 발송·**앱 정보 검토 제출(POST mini-app/review)** 은 **API 완전 대체 가능 확정**. 남은 미확정 2건은 상태 게이트 대기: 버전 검토 요청 제출은 앱 정보(meta) 검토 승인 대기(게이트 A — fixed-cost-keeper 는 hasInReview=true 로 심사 중), 출시는 버전 검토 승인 대기(토스 심사, 시간 소요). release-watch 크론이 `hasApproved`/`reviewStatus` 폴링으로 이어받음.
+> 앱 생성·업로드(3-step, content-type=application/zip)·테스트 발송·**앱 정보 검토 제출(POST mini-app/review)** 은 **API 완전 대체 가능 확정**. 버전 검토 요청 제출·출시하기·검토 요청 취소는 **DOM 실측 기반으로 구현 완료**(issue #1) — 내부 API는 첫 라이브 실행 시 네트워크 캡처로 자동 기록해 본 표를 갱신한다. release-watch 크론이 `hasApproved`/`reviewStatus` 폴링으로 이어받음.
 
 ---
 

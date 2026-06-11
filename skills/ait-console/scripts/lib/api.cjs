@@ -504,6 +504,7 @@ async function getTestLinks(request, ws, app) {
 }
 
 module.exports = {
+  ORIGIN,
   uuidv7,
   generateDeploymentId,
   ensureSession,

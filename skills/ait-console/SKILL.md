@@ -18,11 +18,12 @@ trigger: 콘솔 자동화, 콘솔 제출, 앱 등록, 앱 정보 등록, set-app
 | read | `versions <appName>` | 앱 번들 버전 목록 | 즉시 |
 | write | `register` | 앱 등록(이름·appName·유형) | --dry-run 선행 권장 |
 | write | `set-app-info` | 앱 정보 등록 — APP-SPEC.md 파싱 + 에셋 업로드 + draft 저장·readback 검증. **앱정보 검수 제출은 `--submit` 명시 필요** | draft까지 자동 / 검수 제출은 --submit 명시 |
-| write | `upload` | 번들 **테스트 버전** 배포 — 공식 `ait deploy` CLI 래퍼(API 키 토큰 인증). raw S3 3-step은 AccessDenied로 폐기(deprecated). 동일 번들 재업로드(Code 4097)는 친절 안내 | 인증 토큰 필요(AIT_DEPLOY_API_KEY) |
-| write | `test-send` | 테스트 발송(테스트 버튼→"푸시 보내기") | --dry-run 선행 권장 |
-| write | `submit-review` | 검토 요청 + 노트 작성(SUBMIT.md 전재) | 사용자 명시 개시 |
+| write | `upload` | 번들 **테스트 버전** 배포 — 공식 `ait deploy` CLI 래퍼(API 키 토큰 인증). raw S3 3-step은 AccessDenied로 폐기(deprecated). 동일 번들 재업로드(Code 4097)는 친절 안내. **memo는 `ait deploy --help`에서 `-m`/`--memo` 지원 감지 시에만 부착**(미지원 CLI 호환 — 미지원이면 콘솔 메모 미입력) | 인증 토큰 필요(AIT_DEPLOY_API_KEY) |
+| write | `test-send` | 테스트 발송(bundles/test-push) — **발송 성공 시 정상 종료(exit 0)**. isTested는 단말에서 테스트 앱 실행 시 true 전이(짧게 3회/15초만 확인) | --dry-run 선행 권장 |
+| write | `submit-review` | 검토 요청 제출 — **DOM 제출 구현**(행 "검토 요청"→"검토 요청하기" 모달에 출시 노트 입력→제출). 출시 노트: `--note` 우선, 없으면 SUBMIT.md "## 업데이트 노트"/"## 출시 노트" 절(필수). 첫 라이브 제출 시 검토 제출 API 자동 캡처 | 사용자 명시 개시(`--confirm` 코드 강제) |
+| write | `cancel-review` | 검토 요청 취소 — 검토중 버전 행 "요청 취소" 클릭("검토 중"→"요청 취소됨" 전이). 검토중 버전 없으면 exit 1 | 사용자 명시 개시(`--confirm` 코드 강제) |
 | read(크론) | `release-status` | 출시하기 활성 감지 — **클릭 금지** | 크론 호출 |
-| write | `release` | 출시하기 클릭(출시 확정) | 사용자 명시 개시 |
+| write | `release` | 출시하기 — **"출시하기" 버튼 DOM 클릭 구현**(버튼 미노출 시 스크린샷 후 안전 중단). 첫 라이브 출시 시 release API 자동 캡처 | 사용자 명시 개시(`--confirm` 코드 강제) |
 | 루프 | `app-approval-watch` | 앱 정보 hasApproved 폴링 → true 시 "버전 검토 요청 가능" 안내 | 불요(read 전용) |
 | 루프 | `release-watch` | release-status 폴링 → 활성 시 release | 사용자 명시 개시 |
 | write | `ad-apply` | 광고 unit ID 신청 | --dry-run 선행 권장 |
@@ -49,9 +50,10 @@ node ait-console.cjs register --app <appName> --name <표시이름> --type <NON_
 node ait-console.cjs set-app-info <appName> [--docs <docs 경로>] [--submit]
 node ait-console.cjs upload <projectDir> [--memo <메모>] [--bundle <.ait>]
 # raw S3 3-step(initialize→PUT→complete)은 AccessDenied로 폐기 — lib/api.cjs DEPRECATED 주석 참조
-node ait-console.cjs test-send --app <appName> [--dry-run]
-node ait-console.cjs submit-review --app <appName> --docs <docs 경로> [--first|--update] [--dry-run]
-node ait-console.cjs release --app <appName>
+node ait-console.cjs test-send <appName> [deploymentId]
+node ait-console.cjs submit-review <appName> --confirm [--note "<출시 노트>"] [--docs <docs 경로>]
+node ait-console.cjs release <appName> --confirm
+node ait-console.cjs cancel-review <appName> --confirm
 ```
 
 ### create/update 자동 범위 vs 출시 상태머신
@@ -129,7 +131,7 @@ node ait-console.cjs release --app <appName>
 - **목적**: 앱 정보 검수 제출 후 `hasApproved=true`(앱 정보 승인)를 폴링. 승인되면 버전 검토 요청(`submit-review`)이 가능함을 알린다.
 - **check**: `GET /mini-app/{app}` 의 `hasApproved` — read 전용·안전. 클릭 없음.
 - **onReady**: "승인 완료" 로그 + `submit-review` 실행 가능 안내.
-- **`--then-submit-review`**: 승인 후 submit-review 체인을 시도하나, 현재 submit-review가 게이트 통과 후 미캡처 상태이므로 "console-dom-map.md 갱신 필요(승인 후 재캡처)" 마커로 안전 중단한다. 추측 강행 금지.
+- **`--then-submit-review`**: submit-review는 파괴적 동작(`--confirm` 코드 강제)이라 자동 체인하지 않는다 — 명시 실행 안내(`submit-review <appName> --confirm --note ...`)와 함께 안전 중단.
 
 ```
 node ait-console.cjs app-approval-watch <appName> [--interval 1h] [--max N]
@@ -169,7 +171,7 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 > **모든 watcher(release-watch / ad-id-watch / template-watch)는 사용자 개시 또는 명시 설정에서만 기동한다 — 어떤 것도 무단 자동 기동·자동 출시하지 않는다.**
 
 - `release`는 `--confirm-release` 플래그 또는 사용자 "출시해라" 명시 체인 안에서만 실행
-- **`submit-review`·`release`는 `--confirm` 필수(코드 강제) — 없으면 즉시 exit 2로 거부**
+- **`submit-review`·`release`·`cancel-review`는 `--confirm` 필수(코드 강제) — 없으면 즉시 exit 2로 거부**
 - 파이프라인·다른 스킬이 `submit-review`, `release`, watcher를 자동 호출하는 것을 금지
 - 테스트 발송(`test-send`)까지만 파이프라인 자동 범위이며, 그 이후는 항상 사용자 명시 명령
 - `release-status`는 판정 전용 — 어떤 경우에도 클릭하지 않는다
@@ -178,12 +180,13 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 
 ## 7. 외부 심사 게이트 (미캡처 항목)
 
-콘솔 쓰기 플로우 중 일부는 토스 측 심사 완료가 선행 조건이라 현재 spike 시점에 자력 통과 불가하다:
+콘솔 쓰기 플로우 중 일부는 토스 측 심사 완료가 선행 조건이다:
 
 | 항목 | 상태 | 선행 조건 |
 |---|---|---|
-| `submit-review` — 검토 요청 제출 + 출시노트 폼 | **미캡처 (게이트 A 차단)** | 앱 정보(meta) `hasApproved===true` 필요 |
-| `release` — 출시하기 클릭 | **미캡처** | 버전 `reviewStatus==="APPROVED"` 필요 |
+| `submit-review` — 검토 요청 제출 + 출시노트 폼 | **DOM 제출 구현(issue #1)** — 첫 라이브 제출 시 API 자동 캡처(`references/dumps-write/review-submit-capture.json`) | 앱 정보(meta) `hasApproved===true` + 버전 `isTested===true` 필요 |
+| `release` — 출시하기 클릭 | **DOM 클릭 구현(issue #1)** — 버튼 미노출 시 스크린샷 후 안전 중단, 첫 라이브 출시 시 API 자동 캡처(`release-capture.json`) | 버전 `reviewStatus==="APPROVED"` 필요 |
+| `cancel-review` — 검토 요청 취소 | **DOM 클릭 구현(issue #1 신규)** — "요청 취소" 버튼, 첫 라이브 취소 시 API 자동 캡처(`cancel-review-capture.json`) | 검토중(`IN_REVIEW` 계열) 버전 존재 필요 |
 | `ad-apply` — 광고 ID 신청 | **미캡처(T3 보류)** | 앱 정보(meta) `hasApproved===true` 필요(미승인 시 exit 3 게이트 차단) + spike 조사 미완료 |
 | `template-watch` — 템플릿 심사 감지 | **미캡처(T3 보류)** | spike 조사 미완료 |
 

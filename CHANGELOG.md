@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.4.0 (2026-06-11)
+이슈 #1 "[ait-console] 출시 체인 부족분 5건" 조치 (fixes #1):
+- upload: ait CLI가 `-m`/`--memo` 미지원인데 항상 부착해 업로드 전면 실패하던 버그 수정 — `ait deploy --help` 출력에서 지원 감지 시에만 부착, 미지원이면 1줄 안내 후 메모 없이 배포
+- test-send: isTested 즉시 전이 강요(8회/40초 폴링 후 fatal) 제거 — isTested는 단말에서 테스트 앱 실행 시 전이(실측)이므로 3회/15초만 확인하고 미전이도 발송 성공으로 정상 종료(exit 0)
+- submit-review: 실제 검토 제출 구현 — 게이트 검사 후 행별 "검토 요청" 클릭→"검토 요청하기" 모달에 출시 노트(`--note` 또는 SUBMIT.md "## 업데이트/출시 노트" 절, 필수) 입력→제출→reviewStatus 검토중 전이 확인. 첫 라이브 제출 시 검토 제출 API 네트워크 캡처 자동 기록(dumps-write/review-submit-capture.json)
+- release: 출시하기 클릭 구현 — READY 게이트 후 "출시하기" 버튼 클릭(미노출 시 스크린샷+안전 중단)→deployed=true 확인. release API 자동 캡처(dumps-write/release-capture.json)
+- cancel-review 신규 — 검토중 버전 행 "요청 취소" 클릭("검토 중"→"요청 취소됨"), `--confirm` 코드 강제(없으면 exit 2). API 자동 캡처(dumps-write/cancel-review-capture.json)
+
 ## 3.3.0 (2026-06-11)
 - test-send 무조건 발송 정책: upload 성공 후 test-send를 모든 앱(실앱 포함)에서 무조건 수행 — 테스트 앱 한정 write 정책에서 upload·test-send 제외, 보류·생략 금지 (사용자 지시). ait-console §9·§8·자동 범위, pipeline Phase C/C', create·update 커맨드 동기화
 

@@ -210,7 +210,8 @@ async function cmdVersions(request, appName) {
 // ---------------------------------------------------------------- upload (공식 ait deploy CLI 래퍼)
 // raw S3 3-step(initialize→presigned PUT→complete)은 표면상 CREATED여도 콘솔이
 // 번들을 못 읽어 AccessDenied 발생 → 폐기(lib/api.cjs DEPRECATED 주석 참조).
-// 공식 경로: <projectDir>/node_modules/.bin/ait deploy [--location <.ait>] [-m <메모>]
+// 공식 경로: <projectDir>/node_modules/.bin/ait deploy [--location <.ait>]
+// (-m/--memo 는 CLI 버전에 따라 미지원 — `ait deploy --help`로 감지해 지원 시에만 부착)
 // — 앱 프로젝트 디렉터리를 cwd로 실행(granite.config 사용). 인증은 API 키 토큰
 // (`ait token add --api-key <key>`, 토큰은 ~/.ait/credentials 저장).
 
@@ -281,7 +282,15 @@ async function cmdUpload(projectDir, flags) {
     효과: '새 테스트 버전 배포(deeplink 발급). 검토 요청/출시는 수행하지 않음',
   });
 
-  const args = ['deploy', ...(bundle ? ['--location', bundle] : []), '-m', memo];
+  // issue #1: live ait deploy signature has no -m/--memo — attaching it on an
+  // unsupported CLI fails every upload with `Unknown Syntax Error: Unsupported option name ("-m")`.
+  // Detect support from `ait deploy --help` (stdout+stderr, stripAnsi) and attach only when present.
+  const helpOut = await execFileP(aitBin, ['deploy', '--help'], { cwd: projectDir });
+  const memoSupported = /(^|[\s[(,])(--memo|-m)\b/.test(stripAnsi(`${helpOut.stdout}\n${helpOut.stderr}`));
+  if (!memoSupported) {
+    console.log('[upload] 주의: 현재 ait CLI는 memo 미지원 — 콘솔 메모 미입력(콘솔 versionName으로 식별)');
+  }
+  const args = ['deploy', ...(bundle ? ['--location', bundle] : []), ...(memoSupported ? ['-m', memo] : [])];
   console.log(`[upload] ait ${args.join(' ')} (cwd=${projectDir})`);
   const r = await execFileP(aitBin, args, { cwd: projectDir, timeout: 10 * 60 * 1000 });
   if (r.err) {
@@ -359,9 +368,10 @@ async function cmdTestSend(request, appName, deploymentIdArg) {
   await api.sendTestPush(request, ws, appId, target.deploymentId);
   console.log('[test-send] bundles/test-push 호출 성공 — isTested 전이 확인 중');
 
-  // readback: isTested false -> true (dom-map 실측: 즉시 전이)
+  // readback: isTested transitions when the test app is OPENED ON A DEVICE, not on send
+  // (dom-map 단계2 실측) — poll briefly (3회/15초) and treat no-transition as a normal success.
   let tested = !!target.isTested;
-  for (let i = 0; i < 8 && !tested; i++) {
+  for (let i = 0; i < 3 && !tested; i++) {
     const after = await api.getAppVersions(request, ws, appId);
     const v = after.find((x) => x.versionName === target.versionName);
     if (v && v.isTested) {
@@ -370,8 +380,12 @@ async function cmdTestSend(request, appName, deploymentIdArg) {
     }
     await sleep(5000);
   }
-  if (!tested) throw new Error('[test-send-readback] isTested=true 전이 미확인');
-  console.log(`[done] test-send 완료 — versionName=${target.versionName} isTested=true`);
+  if (tested) {
+    console.log(`[done] test-send 완료 — versionName=${target.versionName} isTested=true`);
+  } else {
+    console.log('[done] test-send 발송 성공 — isTested=false (단말에서 테스트 앱 실행 시 true 전이)');
+    console.log('       submit-review 게이트는 isTested=true 필요 — 단말에서 위 버전 실행 후 진행하세요.');
+  }
 }
 
 // ---------------------------------------------------------------- set-app-info (캡처 API — 실동작)
@@ -696,10 +710,87 @@ async function cmdReleaseStatus(request, appName) {
   return st.ready ? 0 : 3;
 }
 
-// ---------------------------------------------------------------- release (감지=동작 / 클릭=스캐폴드)
-// 감지(release-status 게이트 재확인)까지는 캡처분으로 동작.
-// 실제 "출시하기" 클릭 API/DOM은 미캡처(dom-map §3-W 단계5: 버튼 미노출 — APPROVED 게이트 차단).
-async function cmdRelease(request, appName) {
+// ---------------------------------------------------------------- DOM write 공통 헬퍼 (issue #1)
+// submit-review · release · cancel-review 가 공유: app-build 페이지 진입,
+// 네트워크 캡처(쿠키·토큰 헤더 기록 금지 — method/URL/바디/status만), 스크린샷.
+const DUMPS_DIR = path.join(__dirname, '..', 'references', 'dumps-write');
+
+/** Open /workspace/{ws}/mini-app/{app}/app-build in a new page (dom-map §3 라우트 표). */
+async function openAppBuild(ctx, ws, appId) {
+  const page = await ctx.newPage();
+  await page.goto(`${api.ORIGIN}/workspace/${ws}/mini-app/${appId}/app-build`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60000,
+  });
+  await sleep(3000); // SPA render settle
+  return page;
+}
+
+/** Save a screenshot to docs/qa-screens/console-{name}.png (cwd 기준). Never throws. */
+async function saveShot(page, name) {
+  try {
+    const dir = path.join(process.cwd(), 'docs', 'qa-screens');
+    fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `console-${name}.png`);
+    await page.screenshot({ path: file, fullPage: true });
+    console.error(`[screenshot] ${file}`);
+    return file;
+  } catch (e) {
+    console.error(`[screenshot] 저장 실패(무시): ${e.message}`);
+    return null;
+  }
+}
+
+/** Start capturing POST/PUT traffic. Cookies/token headers are NEVER recorded. */
+function startCapture(page) {
+  const entries = [];
+  page.on('request', (req) => {
+    const m = req.method();
+    if (m !== 'POST' && m !== 'PUT') return;
+    entries.push({ ts: new Date().toISOString(), method: m, url: req.url(), body: req.postData() || null, status: null });
+  });
+  page.on('response', (res) => {
+    const req = res.request();
+    if (req.method() !== 'POST' && req.method() !== 'PUT') return;
+    const e = entries.find((x) => x.method === req.method() && x.url === req.url() && x.status === null);
+    if (e) e.status = res.status();
+  });
+  return {
+    entries,
+    /** Persist captured console-API calls to references/dumps-write/{fileName} and log them. */
+    save(fileName, label) {
+      const relevant = entries.filter((e) => e.url.includes('appsintossconsole'));
+      const out = relevant.length ? relevant : entries;
+      try {
+        fs.mkdirSync(DUMPS_DIR, { recursive: true });
+        const file = path.join(DUMPS_DIR, fileName);
+        fs.writeFileSync(file, JSON.stringify(out, null, 2));
+        for (const e of out) {
+          console.log(`[capture] ${label} API 실측: ${e.method} ${e.url} -> HTTP ${e.status != null ? e.status : '?'} (바디 ${e.body ? `${e.body.length}B` : '없음'})`);
+        }
+        console.log(`[capture] 저장: ${file} — console-dom-map.md §3-W 갱신용`);
+      } catch (err) {
+        console.error(`[capture] 저장 실패(무시): ${err.message}`);
+      }
+    },
+  };
+}
+
+/** First enabled button with the given accessible name (행이 여러 개면 첫 활성), or null. */
+async function firstEnabledButton(scope, name) {
+  const buttons = scope.getByRole('button', { name, exact: true });
+  const n = await buttons.count();
+  for (let i = 0; i < n; i++) {
+    if (!(await buttons.nth(i).isDisabled().catch(() => true))) return buttons.nth(i);
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------- release (issue #1: 출시하기 DOM 클릭 구현)
+// READY 게이트(release-status 재확인)는 캡처분 API. 클릭은 dom-map §3-W 단계5 권장 방식:
+// /app-build 에서 getByRole('button',{name:'출시하기'}) 존재+enabled (APPROVED 후 노출).
+// 버튼 미노출 시 추측 강행하지 않고 스크린샷+안전 중단. 클릭 시 release API를 자동 캡처.
+async function cmdRelease(ctx, request, appName) {
   const { ws, appId } = await resolveApp(request, appName);
   const st = await checkReleaseStatus(request, ws, appId);
   if (!st.ready) {
@@ -709,16 +800,96 @@ async function cmdRelease(request, appName) {
     앱: `${appName} (ws ${ws} / miniApp ${appId})`,
     버전: `${st.candidate.versionName} (reviewStatus=APPROVED, deployed=false)`,
   });
-  throw new Error(
-    '[release] 출시하기 클릭 API 미캡처 — reviewStatus=APPROVED 게이트 통과 후 재캡처하여 ' +
-    'console-dom-map.md(§3-W 단계5) 갱신 필요. 추측 셀렉터/URL로 강행하지 않습니다.'
-  );
+
+  const page = await openAppBuild(ctx, ws, appId);
+  const cap = startCapture(page);
+  try {
+    const btn = await firstEnabledButton(page, '출시하기');
+    if (!btn) {
+      await saveShot(page, 'fail-release');
+      throw new Error(
+        '[release] "출시하기" 버튼 미노출 — console-dom-map.md(§3-W 단계5) 갱신 필요. ' +
+        '추측 셀렉터/URL로 강행하지 않습니다.'
+      );
+    }
+    await btn.click({ timeout: 10000 });
+
+    // 확인 다이얼로그가 뜨면 스크린샷 기록 후 "출시" 포함 primary 클릭(없으면 "확인")
+    const dialog = page.locator('[role=dialog]').first();
+    const hasDialog = await dialog.waitFor({ state: 'visible', timeout: 7000 }).then(() => true).catch(() => false);
+    if (hasDialog) {
+      await saveShot(page, 'release-confirm-dialog');
+      let confirmBtn = dialog.getByRole('button', { name: /출시/ });
+      if (!(await confirmBtn.count())) confirmBtn = dialog.getByRole('button', { name: '확인' });
+      if (!(await confirmBtn.count())) {
+        await saveShot(page, 'fail-release');
+        throw new Error('[release] 확인 다이얼로그 primary 버튼("출시"/"확인") 미발견 — dom-map 갱신 필요');
+      }
+      await confirmBtn.first().click({ timeout: 10000 });
+    }
+    await sleep(3000);
+    cap.save('release-capture.json', '출시');
+
+    // readback: bundles 폴링(6회/30초)으로 deployed=true 전이 확인
+    let deployed = false;
+    for (let i = 0; i < 6; i++) {
+      const after = await api.getAppVersions(request, ws, appId);
+      const v = after.find((x) => x.versionName === st.candidate.versionName);
+      if (v && v.deployed) {
+        deployed = true;
+        break;
+      }
+      await sleep(5000);
+    }
+    if (!deployed) {
+      await saveShot(page, 'fail-release');
+      throw new Error('[release-readback] deployed=true 전이 미확인 — 콘솔에서 직접 확인 필요');
+    }
+    console.log(`[done] release 완료 — versionName=${st.candidate.versionName} deployed=true`);
+  } finally {
+    await page.close().catch(() => {});
+  }
 }
 
-// ---------------------------------------------------------------- submit-review (게이트 검사=동작 / 제출=스캐폴드)
-// 게이트 검사(isTested·게이트 A hasApproved)는 캡처분으로 동작.
-// 출시노트 폼/검토 제출 API는 미캡처(dom-map §3-W 단계4: 게이트 A 차단 상태에서 spike 종료).
-async function cmdSubmitReview(request, appName) {
+// ---------------------------------------------------------------- submit-review (issue #1: DOM 제출 구현)
+// 게이트 검사(isTested·게이트 A hasApproved)는 캡처분 API. 제출은 사용자 콘솔 실측(issue #1):
+// 행별 "검토 요청" 버튼 → "검토 요청하기" 모달(출시 노트 textarea) → "확인"/"검토 요청하기".
+// 검토 제출 API는 첫 라이브 제출 시 네트워크 캡처로 자동 기록(dom-map §3-W 단계4 갱신용).
+
+/** Extract the latest "## 업데이트 노트"/"## 출시 노트" section from docsDir/SUBMIT.md as plain text. */
+function extractReleaseNote(docsDir) {
+  const p = path.join(docsDir, 'SUBMIT.md');
+  if (!fs.existsSync(p)) return null;
+  const lines = fs.readFileSync(p, 'utf8').split('\n');
+  // SUBMIT.md keeps the latest section on top — take the first matching heading.
+  let start = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^##\s*(업데이트|출시)\s*노트/.test(lines[i])) {
+      start = i + 1;
+      break;
+    }
+  }
+  if (start < 0) return null;
+  let end = lines.length;
+  for (let i = start; i < lines.length; i++) {
+    if (/^#{1,6}\s/.test(lines[i]) || /^---/.test(lines[i])) {
+      end = i;
+      break;
+    }
+  }
+  const plain = lines
+    .slice(start, end)
+    .join('\n')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .trim();
+  return plain || null;
+}
+
+async function cmdSubmitReview(ctx, request, appName, flags) {
   const { ws, appId } = await resolveApp(request, appName);
   const [detail, versions] = await Promise.all([
     api.getAppDetail(request, ws, appId),
@@ -739,20 +910,174 @@ async function cmdSubmitReview(request, appName) {
   }
   if (!(detail && detail.hasApproved)) {
     throw new Error(
-      '[submit-review] 게이트 A 차단 — 앱 정보(meta) 미승인. 앱 정보 검토 승인(hasApproved=true) 후 재시도. ' +
-      '출시노트 폼/제출 API는 게이트 통과 후 재캡처하여 console-dom-map.md(§3-W 단계4) 갱신 필요'
+      '[submit-review] 게이트 A 차단 — 앱 정보(meta) 미승인. 앱 정보 검토 승인(hasApproved=true) 후 재시도'
     );
   }
-  throw new Error(
-    '[submit-review] 검토 제출 API/출시노트 폼 미캡처(spike가 게이트 A에 차단된 채 종료) — ' +
-    '게이트 통과 상태에서 재캡처하여 console-dom-map.md(§3-W 단계4) 갱신 필요. 추측 셀렉터/URL로 강행하지 않습니다.'
-  );
+
+  // 출시 노트 결정: --note 우선 > docs/SUBMIT.md 추출 > 없으면 exit 2 (필수 입력)
+  let note = typeof flags.note === 'string' ? flags.note : null;
+  if (!note) {
+    const docsDir = typeof flags.docs === 'string' ? flags.docs : path.join(process.cwd(), 'docs');
+    note = extractReleaseNote(docsDir);
+  }
+  if (!note) {
+    console.error(
+      '[submit-review] 출시 노트 없음 — --note "<텍스트>" 또는 --docs <dir>/SUBMIT.md의 ' +
+      '"## 업데이트 노트"/"## 출시 노트" 절 필요(출시 노트는 필수 입력)'
+    );
+    process.exit(2);
+  }
+
+  announceWrite('submit-review (검토 요청 제출 — 토스 심사 개시)', {
+    앱: `${appName} (ws ${ws} / miniApp ${appId})`,
+    버전: `${latest.versionName} (reviewStatus=${latest.reviewStatus}, isTested=${latest.isTested})`,
+    출시노트: `${note.length}자 — "${note.split('\n')[0].slice(0, 40)}"`,
+    효과: '버전이 토스 심사로 제출됨(reviewStatus 검토중 전이) + 검토 제출 API 자동 캡처',
+  });
+
+  const page = await openAppBuild(ctx, ws, appId);
+  const cap = startCapture(page);
+  try {
+    // 행별 "검토 요청" 버튼 — 첫 활성(disabled 아닌) 버튼 클릭 (dom-map §3-W 단계3, class _3u0hjw0)
+    const btn = await firstEnabledButton(page, '검토 요청');
+    if (!btn) {
+      await saveShot(page, 'fail-submit-review');
+      throw new Error('[submit-review] 활성 "검토 요청" 버튼 미발견 — dom-map 갱신 필요');
+    }
+    await btn.click({ timeout: 10000 });
+
+    const dialog = page.locator('[role=dialog]').first();
+    await dialog.waitFor({ state: 'visible', timeout: 10000 }).catch(async () => {
+      await saveShot(page, 'fail-submit-review');
+      throw new Error('[submit-review] 클릭 후 다이얼로그 미노출 — dom-map 갱신 필요');
+    });
+    const dlgText = (await dialog.innerText().catch(() => '')) || '';
+    // 게이트 A 차단 다이얼로그 방어(이론상 위 게이트 검사로 차단되지만 실측 메시지로 재확인)
+    if (/앱 정보 검토를 먼저 완료/.test(dlgText)) {
+      await saveShot(page, 'fail-submit-review');
+      throw new Error('[submit-review] 게이트 A 차단 다이얼로그("앱 정보 검토를 먼저 완료") — 앱 정보 승인 후 재시도');
+    }
+
+    const textarea = dialog.locator('textarea').first();
+    await textarea.waitFor({ state: 'visible', timeout: 10000 }).catch(async () => {
+      await saveShot(page, 'fail-submit-review');
+      throw new Error('[submit-review] 모달 출시 노트 textarea 미발견 — dom-map 갱신 필요');
+    });
+    await textarea.fill(note);
+
+    // 모달 제출 버튼: "검토 요청하기" 우선, 없으면 "확인" (issue #1 실측: 2버튼 모달)
+    let submitBtn = dialog.getByRole('button', { name: '검토 요청하기' });
+    if (!(await submitBtn.count())) submitBtn = dialog.getByRole('button', { name: '확인' });
+    if (!(await submitBtn.count())) {
+      await saveShot(page, 'fail-submit-review');
+      throw new Error('[submit-review] 모달 제출 버튼("검토 요청하기"/"확인") 미발견 — dom-map 갱신 필요');
+    }
+    await submitBtn.first().click({ timeout: 10000 });
+    await sleep(3000);
+    cap.save('review-submit-capture.json', '검토 제출');
+
+    // readback: bundles 폴링(6회/30초)으로 reviewStatus 검토중 계열 전이 확인
+    let inReview = false;
+    for (let i = 0; i < 6; i++) {
+      const after = await api.getAppVersions(request, ws, appId);
+      const v = after.find((x) => x.versionName === latest.versionName);
+      if (v && IN_REVIEW_RE.test(String(v.reviewStatus))) {
+        inReview = true;
+        break;
+      }
+      await sleep(5000);
+    }
+    if (!inReview) {
+      await saveShot(page, 'fail-submit-review');
+      throw new Error('[submit-review-readback] reviewStatus 검토중 전이 미확인 — 콘솔에서 직접 확인 필요');
+    }
+    console.log(`[done] submit-review 완료 — versionName=${latest.versionName} reviewStatus 검토중 전이 확인`);
+    console.log(`  다음 단계: node ait-console.cjs release-watch ${appName} --confirm-release`);
+  } finally {
+    await page.close().catch(() => {});
+  }
+}
+
+// ---------------------------------------------------------------- cancel-review (issue #1: 신규 — 검토 요청 취소)
+// 실측: 검토중 행에 "요청 취소" 버튼 존재("검토 중" → "요청 취소됨" 전이). 파괴적 — --confirm 코드 강제.
+async function cmdCancelReview(ctx, request, appName) {
+  const { ws, appId } = await resolveApp(request, appName);
+  const versions = await api.getAppVersions(request, ws, appId);
+  const target = versions.find((v) => !v.deployed && IN_REVIEW_RE.test(String(v.reviewStatus)));
+  if (!target) {
+    console.error('[cancel-review] 검토중 버전 없음');
+    process.exit(1);
+  }
+
+  announceWrite('cancel-review (검토 요청 취소 — 토스 심사 중단)', {
+    앱: `${appName} (ws ${ws} / miniApp ${appId})`,
+    버전: `${target.versionName} (reviewStatus=${target.reviewStatus})`,
+    효과: '해당 버전 심사 중단("검토 중" → "요청 취소됨" 전이)',
+  });
+
+  const page = await openAppBuild(ctx, ws, appId);
+  const cap = startCapture(page);
+  try {
+    const btn = await firstEnabledButton(page, '요청 취소');
+    if (!btn) {
+      await saveShot(page, 'fail-cancel-review');
+      throw new Error('[cancel-review] "요청 취소" 버튼 미발견 — dom-map 갱신 필요');
+    }
+    await btn.click({ timeout: 10000 });
+
+    // 확인 다이얼로그가 있으면 "취소"/"확인" 계열 primary 클릭(스크린샷 기록)
+    const dialog = page.locator('[role=dialog]').first();
+    const hasDialog = await dialog.waitFor({ state: 'visible', timeout: 7000 }).then(() => true).catch(() => false);
+    if (hasDialog) {
+      await saveShot(page, 'cancel-review-confirm-dialog');
+      const dlgButtons = dialog.getByRole('button');
+      const cnt = await dlgButtons.count();
+      let confirmBtn = null;
+      outer: for (const re of [/요청\s*취소/, /^취소하기$/, /^확인$/, /취소/]) {
+        for (let i = 0; i < cnt; i++) {
+          const txt = ((await dlgButtons.nth(i).innerText().catch(() => '')) || '').trim();
+          if (re.test(txt)) {
+            confirmBtn = dlgButtons.nth(i);
+            break outer;
+          }
+        }
+      }
+      if (!confirmBtn) {
+        await saveShot(page, 'fail-cancel-review');
+        throw new Error('[cancel-review] 확인 다이얼로그 primary 버튼("취소"/"확인" 계열) 미발견 — dom-map 갱신 필요');
+      }
+      await confirmBtn.click({ timeout: 10000 });
+    }
+    await sleep(3000);
+    cap.save('cancel-review-capture.json', '검토 취소');
+
+    // readback: bundles 폴링(6회/30초)으로 검토중 상태 이탈 확인(IN_REVIEW_RE 불일치 전이)
+    let cancelled = false;
+    let finalStatus = target.reviewStatus;
+    for (let i = 0; i < 6; i++) {
+      const after = await api.getAppVersions(request, ws, appId);
+      const v = after.find((x) => x.versionName === target.versionName);
+      if (v && !IN_REVIEW_RE.test(String(v.reviewStatus))) {
+        cancelled = true;
+        finalStatus = v.reviewStatus;
+        break;
+      }
+      await sleep(5000);
+    }
+    if (!cancelled) {
+      await saveShot(page, 'fail-cancel-review');
+      throw new Error('[cancel-review-readback] 검토중 상태 이탈 미확인 — 콘솔에서 직접 확인 필요');
+    }
+    console.log(`[done] cancel-review 완료 — versionName=${target.versionName} reviewStatus=${finalStatus}`);
+  } finally {
+    await page.close().catch(() => {});
+  }
 }
 
 // ---------------------------------------------------------------- release-watch (asyncWatch 기반)
 // 안전 규칙: 사용자 "출시해라" 개시 체인(또는 명시 설정)에서만 기동 — --confirm-release 필수.
 // check = release-status(API 우선), onReady = release 1회(실패 시 재시도 금지).
-async function cmdReleaseWatch(request, appName, flags) {
+async function cmdReleaseWatch(ctx, request, appName, flags) {
   const { ws, appId } = await resolveApp(request, appName);
   const intervalMs = parseInterval(flags.interval); // 기본 1h
   const max = flags.max !== undefined ? parseInt(flags.max, 10) : null;
@@ -771,10 +1096,9 @@ async function cmdReleaseWatch(request, appName, flags) {
       const st = await checkReleaseStatus(request, ws, appId);
       return { ready: st.ready, reason: `${st.verdict} — ${st.reason}` };
     },
-    // 주의: 현재 release의 "출시하기 클릭"은 미캡처 스캐폴드 — READY 도달 시
-    // 게이트 재확인·announceWrite까지 수행 후 재캡처 안내와 함께 중단된다.
-    // release-watch는 --confirm-release로 사용자가 이미 개시 승인한 체인임.
-    onReady: () => cmdRelease(request, appName),
+    // release-watch는 --confirm-release로 사용자가 이미 개시 승인한 체인 —
+    // READY 도달 시 release(출시하기 DOM 클릭, issue #1 구현)를 1회 실행한다.
+    onReady: () => cmdRelease(ctx, request, appName),
   });
   if (result.status === 'ready') {
     console.log(`[release-watch] 완료 — release 실행됨 (poll ${result.polls}회)`);
@@ -792,8 +1116,8 @@ async function cmdReleaseWatch(request, appName, flags) {
 // 안전 규칙: read 전용 폴링 — 사용자 개시 불요(클릭 없음).
 // check = getAppDetail.hasApproved (API 직접, DOM 불필요).
 // onReady = "승인 완료" 로그 + "버전 검토 요청 가능" 안내.
-// --then-submit-review 플래그가 있으면 submit-review 체인을 시도하나,
-// submit-review가 아직 게이트 통과 후 미캡처 상태이므로 "dom-map 갱신 필요" 마커로 안전 중단.
+// --then-submit-review 플래그가 있어도 submit-review는 파괴적 동작(--confirm 강제)이라
+// 자동 체인하지 않고 명시 실행 안내와 함께 안전 중단.
 async function cmdAppApprovalWatch(request, appName, flags) {
   const { ws, appId } = await resolveApp(request, appName);
   const intervalMs = parseInterval(flags.interval); // default 1h
@@ -825,11 +1149,10 @@ async function cmdAppApprovalWatch(request, appName, flags) {
       console.log('[app-approval-watch] 다음 단계: 버전 검토 요청(submit-review) 가능');
       console.log(`  node ait-console.cjs submit-review ${appName}`);
       if (flags['then-submit-review']) {
-        // submit-review is still a scaffold (gate A blocked during spike); halt safely.
+        // submit-review is destructive (--confirm enforced) — never auto-chain it.
         throw new Error(
-          '[app-approval-watch --then-submit-review] submit-review 폼/API 미캡처 — ' +
-          '게이트 A 통과 상태에서 재캡처하여 console-dom-map.md(§3-W 단계4) 갱신 필요. ' +
-          '추측 셀렉터/URL로 강행하지 않습니다.'
+          '[app-approval-watch --then-submit-review] submit-review는 파괴적 동작 — 자동 체인 금지. ' +
+          `사용자 명시 실행 필요: node ait-console.cjs submit-review ${appName} --confirm --note "<출시 노트>"`
         );
       }
     },
@@ -885,16 +1208,31 @@ write (캡처 API — 실동작):
                                   cwd로 node_modules/.bin/ait deploy 실행, deeplink·deploymentId 보고
                                   토큰 없으면: AIT_DEPLOY_API_KEY env로 자동 등록, env도 없으면 exit 2(요청)
                                   --memo 미지정 시 앱 package.json version 또는 "auto"
+                                  memo는 ait deploy --help에서 -m/--memo 지원 감지 시에만 부착(미지원 CLI 호환)
   test-send <appName> [deploymentId]
-                                  테스트 푸시 실발송(bundles/test-push) → isTested=true 확인
+                                  테스트 푸시 실발송(bundles/test-push) — 발송 성공 시 정상 종료(exit 0)
+                                  isTested는 단말에서 테스트 앱 실행 시 true 전이(짧게 3회/15초만 확인)
                                   deploymentId 생략 시 최신 버전 대상
+  submit-review <appName> --confirm [--note "<출시 노트>"] [--docs <dir>]
+                                  검토 요청 제출 — 게이트 검사(게이트A·isTested) 후 행별 "검토 요청" 클릭
+                                  → 모달 textarea 출시 노트 입력 → 제출 → reviewStatus 검토중 전이 확인
+                                  출시 노트: --note 우선, 없으면 <docs>/SUBMIT.md의
+                                  "## 업데이트 노트"/"## 출시 노트" 절(--docs 생략 시 cwd/docs) — 둘 다 없으면 exit 2
+                                  첫 라이브 제출 시 검토 제출 API 자동 캡처(references/dumps-write/)
+                                  --confirm 필수(코드 강제) — 없으면 exit 2
+  release <appName> --confirm     출시하기 — READY 게이트 확인 후 "출시하기" 버튼 클릭 → deployed=true 확인
+                                  버튼 미노출 시 스크린샷 후 안전 중단(추측 강행 금지). release API 자동 캡처
+                                  --confirm 필수(코드 강제) — 없으면 exit 2
+  cancel-review <appName> --confirm
+                                  검토 요청 취소 — 검토중 버전 행 "요청 취소" 클릭("검토 중"→"요청 취소됨")
+                                  검토중 버전 없으면 exit 1. --confirm 필수(코드 강제) — 없으면 exit 2
 
 watch (lib/watch.cjs asyncWatch 기반 — 기본 1시간 폴링):
   app-approval-watch <appName> [--interval 1h] [--max N] [--then-submit-review]
                                   앱 정보 hasApproved 폴링 → true 시 "버전 검토 요청 가능" 안내
                                   read 전용 폴링(클릭 없음) — 사용자 개시 불요
-                                  --then-submit-review: 승인 후 submit-review 체인 시도
-                                    (현재 미캡처 상태라 "dom-map 갱신 필요" 마커로 안전 중단)
+                                  --then-submit-review: submit-review는 파괴적(--confirm 강제)이라
+                                    자동 체인하지 않고 명시 실행 안내와 함께 안전 중단
                                   exit 4=대기 만료(--max 도달)
                                   체인: app-approval-watch → submit-review → release-watch → release
   release-watch <appName> --confirm-release [--interval 1h] [--max N]
@@ -904,11 +1242,6 @@ watch (lib/watch.cjs asyncWatch 기반 — 기본 1시간 폴링):
 
 scaffold (외부 심사 게이트로 미캡처 — 실행 시 안내 후 exit 1):
   register                        앱 등록 — 폼 셀렉터/API 미캡처(dom-map 갱신 필요)
-  submit-review <appName> --confirm
-                                  검토 요청 — 게이트 검사(게이트A·isTested)는 동작, 제출 API 미캡처
-                                  --confirm 필수(코드 강제) — 없으면 exit 2
-  release <appName> --confirm     출시하기 — 감지(release-status)는 동작, 클릭 API는 APPROVED 게이트 통과 후 재캡처
-                                  --confirm 필수(코드 강제) — 없으면 exit 2
   ad-apply <appName>              광고 unit ID 신청 — 신청 플로우 미캡처
   ad-id-watch <appName>           광고 ID 발급 감지 watcher — 감지 신호 미캡처
   template-watch <appName>        기능성 템플릿 심사 감지 watcher — 감지 신호 미캡처
@@ -982,7 +1315,7 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
   }
 
   // ---- 인자 검증 (세션 기동 전)
-  const KNOWN = ['apps', 'versions', 'set-app-info', 'upload', 'test-send', 'release-status', 'release', 'submit-review', 'release-watch', 'app-approval-watch'];
+  const KNOWN = ['apps', 'versions', 'set-app-info', 'upload', 'test-send', 'release-status', 'release', 'submit-review', 'cancel-review', 'release-watch', 'app-approval-watch'];
   if (!KNOWN.includes(sub)) {
     console.error(`[error] 알 수 없는 서브커맨드: "${sub}"`);
     printHelp();
@@ -993,6 +1326,12 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
   }
   if (sub === 'set-app-info' && flags.docs === true) {
     usageExit('--docs 플래그에는 <dir> 값이 필요합니다.', 'node ait-console.cjs set-app-info my-app --docs ./docs');
+  }
+  if (sub === 'submit-review' && flags.note === true) {
+    usageExit('--note 플래그에는 <출시 노트> 값이 필요합니다.', 'node ait-console.cjs submit-review my-app --confirm --note "버그 수정"');
+  }
+  if (sub === 'submit-review' && flags.docs === true) {
+    usageExit('--docs 플래그에는 <dir> 값이 필요합니다.', 'node ait-console.cjs submit-review my-app --confirm --docs ./docs');
   }
   // ---- upload: 공식 ait deploy 래퍼 — 콘솔 세션 불필요(API 키 토큰 인증), 여기서 디스패치
   if (sub === 'upload') {
@@ -1027,6 +1366,12 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
     );
     process.exit(2);
   }
+  if (sub === 'cancel-review' && !flags.confirm) {
+    console.error(
+      '[cancel-review] 검토 요청 취소는 파괴적 동작 — 사용자 명시 승인 필요(--confirm 플래그에서만 실행)'
+    );
+    process.exit(2);
+  }
 
   // ---- 세션 + 디스패치
   const { ctx, request } = await api.ensureSession();
@@ -1037,9 +1382,10 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
     else if (sub === 'set-app-info') await cmdSetAppInfo(request, pos[0], flags);
     else if (sub === 'test-send') await cmdTestSend(request, pos[0], pos[1]);
     else if (sub === 'release-status') exitCode = await cmdReleaseStatus(request, pos[0]);
-    else if (sub === 'release') await cmdRelease(request, pos[0]);
-    else if (sub === 'submit-review') await cmdSubmitReview(request, pos[0]);
-    else if (sub === 'release-watch') exitCode = await cmdReleaseWatch(request, pos[0], flags);
+    else if (sub === 'release') await cmdRelease(ctx, request, pos[0]);
+    else if (sub === 'submit-review') await cmdSubmitReview(ctx, request, pos[0], flags);
+    else if (sub === 'cancel-review') await cmdCancelReview(ctx, request, pos[0]);
+    else if (sub === 'release-watch') exitCode = await cmdReleaseWatch(ctx, request, pos[0], flags);
     else if (sub === 'app-approval-watch') exitCode = await cmdAppApprovalWatch(request, pos[0], flags);
   } finally {
     await ctx.close();

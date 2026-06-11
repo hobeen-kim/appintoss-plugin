@@ -21,7 +21,6 @@
  *   3  release-status not READY (대기/미승인)
  *   4  watch 대기 만료 (--max 도달)
  */
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const api = require('./lib/api.cjs');
@@ -208,7 +207,7 @@ async function cmdVersions(request, appName) {
 
 // ---------------------------------------------------------------- upload (캡처 API — 실동작)
 // dom-map §3-W 단계1: initialize -> presigned S3 PUT -> complete, 이후 bundles readback.
-async function cmdUpload(request, appName, bundlePath) {
+async function cmdUpload(request, appName, bundlePath, flags) {
   const { ws, appId } = await resolveApp(request, appName);
   const stat = fs.statSync(bundlePath);
   announceWrite('upload (테스트 버전 업로드 — initialize → presigned S3 PUT → complete)', {
@@ -217,7 +216,8 @@ async function cmdUpload(request, appName, bundlePath) {
     효과: '새 버전 생성(PREPARE→BUILDING→CREATED). 검토 요청/출시는 수행하지 않음',
   });
 
-  const deploymentId = crypto.randomUUID();
+  // deploymentId: --deployment-id <uuid> 주입 또는 UUIDv7 자동 생성 (v4는 errorCode 4000)
+  const deploymentId = (flags && flags['deployment-id']) ? flags['deployment-id'] : api.generateDeploymentId();
   // step 1/3: initialize — presigned uploadUrl + versionName 발급
   const init = await api.initializeDeployment(request, ws, appId, deploymentId);
   const versionName = init && init.deployment ? init.deployment.versionName : null;
@@ -947,7 +947,7 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
     if (sub === 'apps') await cmdApps(request);
     else if (sub === 'versions') await cmdVersions(request, pos[0]);
     else if (sub === 'set-app-info') await cmdSetAppInfo(request, pos[0], flags);
-    else if (sub === 'upload') await cmdUpload(request, pos[0], pos[1]);
+    else if (sub === 'upload') await cmdUpload(request, pos[0], pos[1], flags);
     else if (sub === 'test-send') await cmdTestSend(request, pos[0], pos[1]);
     else if (sub === 'release-status') exitCode = await cmdReleaseStatus(request, pos[0]);
     else if (sub === 'release') await cmdRelease(request, pos[0]);

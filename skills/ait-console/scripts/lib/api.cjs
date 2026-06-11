@@ -12,8 +12,23 @@
  *   bundles/test-push, bundles/test-links.
  * Credentials / cookies / tokens / presigned URLs are NEVER printed.
  */
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+
+// dom-map §3-W: deploymentId must be UUIDv7 (time-ordered). v4 rejected with errorCode 4000.
+function uuidv7() {
+  const ts = Date.now();
+  const b = crypto.randomBytes(16);
+  b[0] = (ts / 2 ** 40) & 0xff; b[1] = (ts / 2 ** 32) & 0xff; b[2] = (ts / 2 ** 24) & 0xff;
+  b[3] = (ts / 2 ** 16) & 0xff; b[4] = (ts / 2 ** 8) & 0xff; b[5] = ts & 0xff;
+  b[6] = (b[6] & 0x0f) | 0x70; // version 7
+  b[8] = (b[8] & 0x3f) | 0x80; // variant
+  const h = b.toString('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+function generateDeploymentId() { return uuidv7(); }
 
 let chromium;
 try {
@@ -455,7 +470,8 @@ async function uploadBundleToPresignedUrl(request, uploadUrl, filePath) {
   const buf = fs.readFileSync(filePath);
   const res = await request.put(uploadUrl, {
     data: buf,
-    headers: { 'content-type': 'application/octet-stream' },
+    // presigned 서명 content-type=application/zip 일치 필수(octet-stream→403), dom-map §3-W 단계1
+    headers: { 'content-type': 'application/zip' },
     timeout: 10 * 60 * 1000,
     failOnStatusCode: false,
   });
@@ -481,6 +497,8 @@ async function getTestLinks(request, ws, app) {
 }
 
 module.exports = {
+  uuidv7,
+  generateDeploymentId,
   ensureSession,
   listWorkspaces,
   listApps,

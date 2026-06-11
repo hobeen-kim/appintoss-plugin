@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.2.0 (2026-06-11)
+- bug-report 스킬 추가(자동 감지+승인 후 GitHub 이슈 발행) — 게이트 반복 반려·예외·콘솔 API 드리프트 감지 시 표준 양식 초안 제시, 사용자 승인 후 hobeen-kim/appintoss-plugin에 발행. .github/ISSUE_TEMPLATE/bug_report.md 동일 양식 제공
+
 ## 3.1.0 (2026-06-11)
 - upload을 공식 ait deploy CLI 래퍼로 교체 — raw S3 3-step initialize→PUT→complete 방식은 콘솔 AccessDenied로 폐기(lib/api.cjs는 DEPRECATED 주석 보존)
 - API 키 토큰 인증(ait token add), memo(-m) 지원, 토큰 없으면 AIT_DEPLOY_API_KEY env로 자동 등록 또는 NEEDS_CONTEXT(exit 2)

@@ -12,20 +12,20 @@ trigger: 콘솔 자동화, 콘솔 제출, 앱 등록, 앱 정보 등록, set-app
 
 ## 1. 서브커맨드 목록 및 실행 절차
 
-| 구분 | 서브커맨드 | 설명 | 실행 단위 |
+| 분류 | 서브커맨드 | 설명 | 자동화 경계 |
 |---|---|---|---|
-| read | `apps` | 워크스페이스·앱 목록(+배포 버전) | 즉시 |
-| read | `versions <appName>` | 앱 번들 버전 목록 | 즉시 |
-| write | `register` | 앱 등록(이름·appName·유형) | --dry-run 선행 권장 |
-| write | `set-app-info` | 앱 정보 등록 — APP-SPEC.md 파싱 + 에셋 업로드 + draft 저장·readback 검증. **앱정보 검수 제출은 `--submit` 명시 필요** | draft까지 자동 / 검수 제출은 --submit 명시 |
-| write | `upload` | 번들 **테스트 버전** 배포 — 공식 `ait deploy` CLI 래퍼(API 키 토큰 인증). raw S3 3-step은 AccessDenied로 폐기(deprecated). 동일 번들 재업로드(Code 4097)는 친절 안내. **memo는 `ait deploy --help`에서 `-m`/`--memo` 지원 감지 시에만 부착**(미지원 CLI 호환 — 미지원이면 콘솔 메모 미입력) | 인증 토큰 필요(AIT_DEPLOY_API_KEY) |
-| write | `test-send` | 테스트 발송(bundles/test-push) — **발송 성공 시 정상 종료(exit 0)**. isTested는 단말에서 테스트 앱 실행 시 true 전이(짧게 3회/15초만 확인) | --dry-run 선행 권장 |
-| write | `submit-review` | 검토 요청 제출 — **DOM 제출 구현**(행 "검토 요청"→"검토 요청하기" 모달에 출시 노트 입력→제출). 출시 노트: `--note` 우선, 없으면 SUBMIT.md "## 업데이트 노트"/"## 출시 노트" 절(필수). 첫 라이브 제출 시 검토 제출 API 자동 캡처 | 사용자 명시 개시(`--confirm` 코드 강제) |
-| write | `cancel-review` | 검토 요청 취소 — 검토중 버전 행 "요청 취소" 클릭("검토 중"→"요청 취소됨" 전이). 검토중 버전 없으면 exit 1 | 사용자 명시 개시(`--confirm` 코드 강제) |
-| read(크론) | `release-status` | 출시하기 활성 감지 — **클릭 금지** | 크론 호출 |
-| write | `release` | 출시하기 — **"출시하기" 버튼 DOM 클릭 구현**(버튼 미노출 시 스크린샷 후 안전 중단). 첫 라이브 출시 시 release API 자동 캡처 | 사용자 명시 개시(`--confirm` 코드 강제) |
-| 루프 | `app-approval-watch` | 앱 정보 hasApproved 폴링 → true 시 "버전 검토 요청 가능" 안내 | 불요(read 전용) |
-| 루프 | `release-watch` | release-status 폴링 → 활성 시 release | 사용자 명시 개시 |
+| AUTO-read | `apps` | 워크스페이스·앱 목록(+배포 버전) | 자동 조회 |
+| AUTO-read | `versions <appName>` | 앱 번들 버전 목록 | 자동 조회 |
+| AUTO-create | `register` | 앱 등록(이름·appName·유형) — REST 2-step 구현됨, `--title`·`--idea` 필수, 멱등 | write 자동(첫 콘솔 앱 생성) |
+| MANUAL | `set-app-info` | 앱 정보 등록 — APP-SPEC.md 파싱 + 에셋 업로드 + draft 저장·readback 검증. **앱정보 검수 제출은 `--submit` 명시 필요** | MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력 |
+| AUTO-deploy | `upload` | 번들 **테스트 버전** 배포 — 공식 `ait deploy` CLI 래퍼(API 키 토큰 인증). raw S3 3-step은 AccessDenied로 폐기(deprecated). 동일 번들 재업로드(Code 4097)는 친절 안내. **memo는 `ait deploy --help`에서 `-m`/`--memo` 지원 감지 시에만 부착**(미지원 CLI 호환 — 미지원이면 콘솔 메모 미입력) | 자동(번들 배포, AIT_DEPLOY_API_KEY) |
+| MANUAL | `test-send` | 테스트 발송(bundles/test-push) — **발송 성공 시 정상 종료(exit 0)**. isTested는 단말에서 테스트 앱 실행 시 true 전이(짧게 3회/15초만 확인) | MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력 |
+| MANUAL | `submit-review` | 검토 요청 제출 — **DOM 제출 구현**(행 "검토 요청"→"검토 요청하기" 모달에 출시 노트 입력→제출). 출시 노트: `--note` 우선, 없으면 SUBMIT.md "## 업데이트 노트"/"## 출시 노트" 절(필수). 첫 라이브 제출 시 검토 제출 API 자동 캡처 | MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력 |
+| MANUAL | `cancel-review` | 검토 요청 취소 — 검토중 버전 행 "요청 취소" 클릭("검토 중"→"요청 취소됨" 전이). 검토중 버전 없으면 exit 1 | MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력 |
+| AUTO-read | `release-status` | 출시하기 활성 감지 — **클릭 금지** | 자동 조회(크론 호출) |
+| MANUAL | `release` | 출시하기 — **"출시하기" 버튼 DOM 클릭 구현**(버튼 미노출 시 스크린샷 후 안전 중단). 첫 라이브 출시 시 release API 자동 캡처 | MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력 |
+| AUTO-read | `app-approval-watch` | 앱 정보 hasApproved 폴링 → true 시 "버전 검토 요청 가능" 안내 | 자동 조회(감지·알림 전용) |
+| 루프 | `release-watch` | release-status 폴링 → 출시 가능 감지 시 수동 출시 안내만(자동 release 호출 없음) | 감지·알림 전용 — 출시 가능 감지 시 수동 출시 안내만 출력 |
 | write | `ad-apply` | 광고 unit ID 신청 | --dry-run 선행 권장 |
 | 루프 | `ad-id-watch` | 광고 ID 발급 감지 → config 주입·재빌드·재배포 | 사용자 명시 개시 |
 | 루프 | `template-watch` | 기능성 템플릿 심사 통과 감지 → 발송 활성화 알림 | 사용자 명시 개시 |
@@ -58,26 +58,27 @@ node ait-console.cjs cancel-review <appName> --confirm
 
 ### create/update 자동 범위 vs 출시 상태머신
 
-**파이프라인 자동 범위** (테스트 발송까지만):
+**파이프라인 자동 범위** (upload까지만):
 
-- create 끝: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동 저장+검증) → [`--submit` 명시 시 앱정보 검수 제출] → `upload`(테스트 버전) → `test-send`
-- update 끝: `upload`(테스트 버전) → `test-send` — upload 성공 시 test-send 무조건 수행(실앱 포함, 보류 금지)
+- create 끝: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동 저장+검증) → [`--submit` 명시 시 앱정보 검수 제출] → `upload`(테스트 버전)
+- update 끝: `upload`(테스트 버전)
 
 `set-app-info`는 docs/APP-SPEC.md(부제·상세설명·카테고리 1순위·검색키워드)와 docs/assets(icon·screenshot-1~3·thumbnail)를 콘솔에 반영한다. 기본은 **draft 저장+readback 검증까지만**이며, **앱정보 검수 제출(POST mini-app/review)은 `--submit` 명시 시에만** 수행한다. 업로드된 아이콘의 콘솔 발급 static URL은 출력으로 안내되므로 granite.config.ts `brand.icon`을 이 URL로 갱신한다.
 
 **출시 상태머신** (사용자 "출시해라" 명시 명령에서만 개시):
 
 0. `set-app-info --submit` — 앱정보 검수 제출(`--submit` 명시 필요) → `app-approval-watch` — 앱 정보 hasApproved 폴링(read 전용, 사용자 개시 불요) — 승인 후 다음 진행
-1. `submit-review` — 검토 요청 + 노트 작성
-2. `release-watch` — 심사 결과 폴링, APPROVED 시 `release` 실행
+1. `submit-review` — MANUAL: 콘솔에서 직접 검토 요청 + 노트 작성(스크립트는 안내만 출력)
+2. `release-watch` — 심사 결과 폴링, APPROVED 감지 시 수동 출시 안내만(자동 `release` 호출 없음)
+3. `release` — MANUAL: 콘솔에서 직접 출시하기 클릭(스크립트는 안내만 출력)
 
-체인 전체: `set-app-info --submit → app-approval-watch → submit-review → release-watch → release`
+체인 전체: `set-app-info --submit → app-approval-watch → [MANUAL: submit-review] → release-watch → [MANUAL: release]`
 
 **광고 신청(ad-apply)은 앱 승인(hasApproved=true) 이후에만 가능.** ad-apply 및 ad-id-watch는 app-approval-watch로 앱 승인이 완료된 뒤 시작한다. 앱 미승인 상태에서 ad-apply를 실행하면 exit 3으로 거부된다.
 
 광고 신청 분기 체인: `app-approval-watch(승인 완료) → ad-apply → ad-id-watch`
 
-이 단계들은 파이프라인이 자동 호출하지 않는다(`app-approval-watch`는 read 전용 폴링이라 자동 기동 가능하나, `submit-review`·`release`는 사용자 명시 명령에서만).
+이 단계들은 파이프라인이 자동 호출하지 않는다(`app-approval-watch`는 read 전용 폴링이라 자동 기동 가능하나, `submit-review`·`release`는 MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력).
 
 ---
 
@@ -122,7 +123,7 @@ node ait-console.cjs cancel-review <appName> --confirm
 | watcher | 트리거 | 감지 신호(API 우선) | 완료 동작 | 사용자 개시 필요 |
 |---|---|---|---|---|
 | `app-approval-watch` | 앱 정보 검수 제출(`set-app-info --submit`) 후 | `GET /mini-app/{app}` → `hasApproved===true` | "버전 검토 요청 가능" 안내 로그 (read 전용, 클릭 없음) | 불요(read 전용 폴링) |
-| `release-watch` | 검토 요청(`submit-review`) 후 사용자 "출시해라" | bundles `reviewStatus==="APPROVED" && deployed===false` + `hasApproved===true` | "출시하기" 클릭(`release` 실행) | 필요(`--confirm-release`) |
+| `release-watch` | 검토 요청(`submit-review`) 후 사용자 "출시해라" | bundles `reviewStatus==="APPROVED" && deployed===false` + `hasApproved===true` | 출시 가능 감지 시 수동 출시 안내만 출력(자동 `release` 호출 없음) | 필요(`--confirm-release`) |
 | `ad-id-watch` | 앱 승인 후 광고 신청(`ad-apply`) → 발급 감지 | 광고 ID 발급 여부(API/DOM — dom-map §비동기 상태 감지) | 실 광고 ID를 config 상수 파일의 테스트 ID와 스왑 주입 → 재빌드 안내 → `upload`+`test-send` 재배포 | 필요 |
 | `template-watch` | 기능성 메시지 템플릿 등록 후 사용자 개시 | 템플릿 심사 통과(2~3영업일, API/DOM 감지) | 발송 활성화 stdout 알림(실제 발송 없음) | 필요 |
 
@@ -171,9 +172,9 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 > **모든 watcher(release-watch / ad-id-watch / template-watch)는 사용자 개시 또는 명시 설정에서만 기동한다 — 어떤 것도 무단 자동 기동·자동 출시하지 않는다.**
 
 - `release`는 `--confirm-release` 플래그 또는 사용자 "출시해라" 명시 체인 안에서만 실행
-- **`submit-review`·`release`·`cancel-review`는 `--confirm` 필수(코드 강제) — 없으면 즉시 exit 2로 거부**
+- **`submit-review`·`release`·`cancel-review`는 MANUAL — 콘솔 직접 수행, 스크립트는 "콘솔에서 직접 하세요" 안내만 출력하고 exit 0으로 종료(자동 write 없음)**
 - 파이프라인·다른 스킬이 `submit-review`, `release`, watcher를 자동 호출하는 것을 금지
-- 테스트 발송(`test-send`)까지만 파이프라인 자동 범위이며, 그 이후는 항상 사용자 명시 명령
+- `upload`까지만 파이프라인 자동 범위이며, 그 이후는 항상 사용자 명시 명령
 - `release-status`는 판정 전용 — 어떤 경우에도 클릭하지 않는다
 
 ---
@@ -184,9 +185,9 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 
 | 항목 | 상태 | 선행 조건 |
 |---|---|---|
-| `submit-review` — 검토 요청 제출 + 출시노트 폼 | **DOM 제출 구현(issue #1)** — 첫 라이브 제출 시 API 자동 캡처(`references/dumps-write/review-submit-capture.json`) | 앱 정보(meta) `hasApproved===true` + 버전 `isTested===true` 필요 |
-| `release` — 출시하기 클릭 | **DOM 클릭 구현(issue #1)** — 버튼 미노출 시 스크린샷 후 안전 중단, 첫 라이브 출시 시 API 자동 캡처(`release-capture.json`) | 버전 `reviewStatus==="APPROVED"` 필요 |
-| `cancel-review` — 검토 요청 취소 | **DOM 클릭 구현(issue #1 신규)** — "요청 취소" 버튼, 첫 라이브 취소 시 API 자동 캡처(`cancel-review-capture.json`) | 검토중(`IN_REVIEW` 계열) 버전 존재 필요 |
+| `submit-review` — 검토 요청 제출 + 출시노트 폼 | **MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력** — 선행 조건 충족 여부 안내 후 "콘솔에서 직접 하세요" 메시지 출력·exit 0 | 앱 정보(meta) `hasApproved===true` + 버전 `isTested===true` 필요 |
+| `release` — 출시하기 클릭 | **MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력** — 선행 조건 충족 여부 안내 후 "콘솔에서 직접 하세요" 메시지 출력·exit 0 | 버전 `reviewStatus==="APPROVED"` 필요 |
+| `cancel-review` — 검토 요청 취소 | **MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력** — 검토중 버전 존재 여부 안내 후 "콘솔에서 직접 하세요" 메시지 출력·exit 0 | 검토중(`IN_REVIEW` 계열) 버전 존재 필요 |
 | `ad-apply` — 광고 ID 신청 | **미캡처(T3 보류)** | 앱 정보(meta) `hasApproved===true` 필요(미승인 시 exit 3 게이트 차단) + spike 조사 미완료 |
 | `template-watch` — 템플릿 심사 감지 | **미캡처(T3 보류)** | spike 조사 미완료 |
 
@@ -198,8 +199,8 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 
 파이프라인(`skills/pipeline/SKILL.md`)의 create·update 모드 종료 시 이 스킬이 자동으로 호출된다:
 
-- **create 모드 끝**: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동) → `upload` → `test-send` — 앱정보 검수 제출은 `set-app-info --submit` 명시 시에만
-- **update 모드 끝**: `upload` → `test-send` — upload 성공 시 test-send 무조건 수행(실앱 포함, 보류 금지)
+- **create 모드 끝**: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동) → `upload` — 앱정보 검수 제출은 `set-app-info --submit` 명시 시에만
+- **update 모드 끝**: `upload` — upload까지 자동 범위, 이후는 사용자 명시 명령
 
 각 단계의 성공·실패는 `docs/PIPELINE-LOG.md`와 `docs/REPORT-v{version}.md`에 기록된다.
 
@@ -211,7 +212,7 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 
 **고위험 write(register·submit-review·release·ad-apply)는 테스트 앱 `today-lucky-draw`에서만 수행한다.**
 
-**예외 — `upload`·`test-send`는 테스트 앱 한정에서 제외한다.** 파이프라인 자동 범위에 속하므로 모든 앱(실앱 포함)에서 수행하며, **upload 성공 후 test-send는 무조건 수행한다 — 실앱이라는 이유로 보류·생략하지 않는다** (사용자 지시 2026-06-11).
+**예외 — `upload`는 테스트 앱 한정에서 제외한다.** AUTO-deploy 범위에 속하므로 모든 앱(실앱 포함)에서 자동 수행한다. `test-send`는 MANUAL이므로 콘솔에서 직접 수행한다.
 
 - `--dry-run` 플래그로 먼저 입력값·대상을 검증한다
 - QA 1단계: `--dry-run`/모의 검증(에이전트 실행 가능)

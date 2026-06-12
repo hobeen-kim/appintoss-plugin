@@ -61,7 +61,7 @@
 | 분석(DAU/리텐션) | `POST /workspaces/{ws}/mini-app/{app}/analytics/au` `/analytics/retention` | 쿠키 | 없음 | 가능(조회용 POST) |
 | API 키 목록 | `GET /workspaces/{ws}/api-keys` | 쿠키 | 없음 | **가능** |
 | 약관/이용동의 | `GET /console-user-terms/me`, `.../console-workspace-terms/{type}/skip-permission` | 쿠키 | 없음 | 가능 |
-| **앱 생성** | (read-only 실사 — 미캡처) | 쿠키(추정) | 없음(추정) | **부분/미확인** — 쓰기 플로우 미진입 |
+| **앱 생성** | REST 2-step 확정 (§3-W 단계0 / L138-148 참조) | 쿠키 | 없음 | **가능(확정)** |
 | **버전 업로드** | (read-only 실사 — 미캡처) | 쿠키(추정) | 없음(추정) | **부분/미확인** — `버전 등록` 버튼 미클릭 |
 | **검수 제출 / 강제 배포 / 롤백** | (read-only 실사 — 미캡처) | 쿠키(추정) | 없음(추정) | **부분/미확인** — 쓰기 버튼 미클릭 |
 | **스마트 발송 캠페인 생성** | (read-only 실사 — 미캡처) | 쿠키(추정) | 없음(추정) | **부분/미확인** |

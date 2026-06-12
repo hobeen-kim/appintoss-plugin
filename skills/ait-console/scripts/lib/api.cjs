@@ -93,6 +93,7 @@ function loadEndpoints() {
     url: {
       workspaces: () => `${base}/workspaces`,
       apps: (ws) => `${base}/workspaces/${ws}/mini-app`,
+      entryEligibilityCheck: (ws) => `${base}/workspaces/${ws}/mini-app/entry-eligibility-check`,
       appDetail: (ws, app) => `${base}/workspaces/${ws}/mini-app/${app}`,
       bundles: (ws, app) => `${base}/workspaces/${ws}/mini-app/${app}/bundles`,
       deployed: (ws, app) => `${base}/workspaces/${ws}/mini-app/${app}/bundles/deployed`,
@@ -458,6 +459,22 @@ async function submitAppInfoReview(request, ws, _app, payload) {
   return postJson(request, EP.url.appInfoReview(ws), payload, 'mini-app/review');
 }
 
+// App entry eligibility check (dom-map §3-W 단계0, register 2-step의 1단계):
+// POST /workspaces/{ws}/mini-app/entry-eligibility-check body {idea}
+// -> { enabled, decision("UNDETERMINED"/...), finalMessage, finalReason, requiredActions[], missingInformation[] }.
+// 판정은 등록 자체를 막지 않음(UNDETERMINED여도 생성 진행 가능).
+async function checkEntryEligibility(request, ws, idea) {
+  return postJson(request, EP.url.entryEligibilityCheck(ws), { idea }, 'entry-eligibility-check');
+}
+
+// App create (dom-map §3-W 단계0, register 2-step의 2단계):
+// POST /workspaces/{ws}/mini-app body {title, appName, appType("NON_GAME"/"GAME")}
+// -> { miniAppId, title, appName, appType }. Returns the created miniAppId.
+async function createApp(request, ws, { title, appName, appType }) {
+  const data = await postJson(request, EP.url.apps(ws), { title, appName, appType }, 'mini-app(create)');
+  return data && data.miniAppId;
+}
+
 // ---------------------------------------------------------------- raw 업로드 3-step (DEPRECATED)
 // DEPRECATED — raw S3 3-step(initialize→presigned PUT→complete)은 표면상 CREATED여도
 // 콘솔이 번들을 읽지 못해 AccessDenied 를 유발한다. 업로드는 공식 `ait deploy` 래퍼
@@ -519,6 +536,8 @@ module.exports = {
   uploadResource,
   saveDraft,
   submitAppInfoReview,
+  checkEntryEligibility,
+  createApp,
   initializeDeployment,
   uploadBundleToPresignedUrl,
   completeDeployment,

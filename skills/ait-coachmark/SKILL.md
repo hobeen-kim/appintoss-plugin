@@ -99,6 +99,7 @@ await setStorageItem(ONBOARDING_KEY, 'true');
 - **진입 시 바텀시트 자동 열림**: 검수 반려 사유. 반드시 사용자 액션(탭/버튼) 후에 열기
 - 온보딩은 최초 1회만. `getStorageItem`으로 확인 후 조건부 표시
 - 토스앱 내에서는 뒤로가기 시 온보딩이 다시 뜨지 않도록 상태 관리
+- **클릭 유도 문구(코치마크 카피·CTA 레이블)** 작성 시 `knowledge/copy-deliberation.md` 절차(다중 에이전트 의논)를 따른다.
 
 ## 문서 신선도
 

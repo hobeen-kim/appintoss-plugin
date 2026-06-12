@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.8.0 (2026-06-12)
+- 콘솔 자동화 경계를 AUTO/MANUAL로 재설계: 자동은 register(첫 콘솔 앱 생성, REST 2-step)·upload(번들 배포, apiKey)·조회(apps/versions/release-status/app-approval-watch)로 한정
+- set-app-info·submit-review·cancel-review·release·test-send를 MANUAL로 전환 — 실행 시 콘솔 직접 수행 안내 출력(exit 0), 자동 write 제거. release-watch는 감지·알림 전용(자동 출시 호출 절단)
+- REPORT 발행 의무화 — 화면 변경 또는 버전 상승 또는 지시 완료 시 발행 필수, 마지막 섹션 "🙋 사용자가 해야 할 것"(콘솔 수동 작업 체크리스트) 필수
+- 클릭 유도 문구는 다중 에이전트 의논 절차(knowledge/copy-deliberation.md)로 결정
+- 기능성 알림동의문 입력 항목(동의문 이름·발송 시점) 명문화
+
 ## 3.7.0 (2026-06-12)
 - 스마트발송 추천 문구에서 "토스에서" 포함 규칙 제거(사용자 지시) — 공홈 가이드는 비게임 포함을 권장하나 미사용으로 확정. ait-smart-message·ait-submit·app-spec-template 예시/규칙 동기화. 나머지 규칙(제목 7자·본문 25자·"~요." 마침표·게임 명시·금지 표현) 유지
 

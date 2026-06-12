@@ -16,7 +16,7 @@ trigger: 콘솔 자동화, 콘솔 제출, 앱 등록, 앱 정보 등록, set-app
 |---|---|---|---|
 | AUTO-read | `apps` | 워크스페이스·앱 목록(+배포 버전) | 자동 조회 |
 | AUTO-read | `versions <appName>` | 앱 번들 버전 목록 | 자동 조회 |
-| AUTO-create | `register` | 앱 등록(이름·appName·유형) — REST 2-step 구현됨, `--title`·`--idea` 필수, 멱등 | write 자동(첫 콘솔 앱 생성) |
+| CLI-수동 | `register` | 앱 등록(이름·appName·유형) — REST 2-step 구현됨, `--title`·`--idea` 필수, 멱등. **파이프라인 자동 단계 아님** — 필요 시 사용자가 직접 `register` CLI 실행 또는 콘솔에서 앱 만들기로 생성 | CLI 수동 호출(콘솔 앱 생성, 파이프라인 자동 단계 아님) |
 | MANUAL | `set-app-info` | 앱 정보 등록 — APP-SPEC.md 파싱 + 에셋 업로드 + draft 저장·readback 검증. **앱정보 검수 제출은 `--submit` 명시 필요** | MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력 |
 | AUTO-deploy | `upload` | 번들 **테스트 버전** 배포 — 공식 `ait deploy` CLI 래퍼(API 키 토큰 인증). raw S3 3-step은 AccessDenied로 폐기(deprecated). 동일 번들 재업로드(Code 4097)는 친절 안내. **memo는 `ait deploy --help`에서 `-m`/`--memo` 지원 감지 시에만 부착**(미지원 CLI 호환 — 미지원이면 콘솔 메모 미입력) | 자동(번들 배포, AIT_DEPLOY_API_KEY) |
 | MANUAL | `test-send` | 테스트 발송(bundles/test-push) — **발송 성공 시 정상 종료(exit 0)**. isTested는 단말에서 테스트 앱 실행 시 true 전이(짧게 3회/15초만 확인) | MANUAL — 콘솔 직접 수행, 스크립트는 안내만 출력 |
@@ -60,7 +60,7 @@ node ait-console.cjs cancel-review <appName> --confirm
 
 **파이프라인 자동 범위** (upload까지만):
 
-- create 끝: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동 저장+검증) → [`--submit` 명시 시 앱정보 검수 제출] → `upload`(테스트 버전)
+- create 끝: `upload`(테스트 버전). `register`(콘솔 앱 생성)는 파이프라인 자동 단계 아님 — 사용자가 콘솔에서 직접 앱 만들기 또는 `register` CLI 수동 실행
 - update 끝: `upload`(테스트 버전)
 
 `set-app-info`는 docs/APP-SPEC.md(부제·상세설명·카테고리 1순위·검색키워드)와 docs/assets(icon·screenshot-1~3·thumbnail)를 콘솔에 반영한다. 기본은 **draft 저장+readback 검증까지만**이며, **앱정보 검수 제출(POST mini-app/review)은 `--submit` 명시 시에만** 수행한다. 업로드된 아이콘의 콘솔 발급 static URL은 출력으로 안내되므로 granite.config.ts `brand.icon`을 이 URL로 갱신한다.
@@ -199,7 +199,7 @@ watcher 장시간 폴링을 위한 크론 메커니즘 3가지 중 하나를 선
 
 파이프라인(`skills/pipeline/SKILL.md`)의 create·update 모드 종료 시 이 스킬이 자동으로 호출된다:
 
-- **create 모드 끝**: `register`(미등록 시) → `set-app-info`(앱 정보 draft 자동) → `upload` — 앱정보 검수 제출은 `set-app-info --submit` 명시 시에만
+- **create 모드 끝**: `upload`(테스트 버전) — upload까지 자동 범위. `register`(콘솔 앱 생성)는 파이프라인 자동 단계 아님 — 사용자가 콘솔에서 직접 앱 만들기 또는 `register` CLI 수동 실행
 - **update 모드 끝**: `upload` — upload까지 자동 범위, 이후는 사용자 명시 명령
 
 각 단계의 성공·실패는 `docs/PIPELINE-LOG.md`와 `docs/REPORT-v{version}.md`에 기록된다.

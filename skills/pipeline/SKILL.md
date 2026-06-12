@@ -276,22 +276,23 @@ Phase 3은 세 파트로 구성된다. 세 파트 모두 통과해야 게이트�
 
 Phase 8 보고서 생성 직후 `ait-console` 스킬을 통해 콘솔 테스트 단계를 자동 수행한다:
 
-1. **register** — 동일 appName이 콘솔에 없으면 앱 등록(이름·appName·유형) ← 자동 수행
-2. **upload** — 번들을 테스트 버전으로 업로드 ← 자동 수행
+1. **upload** — 번들을 테스트 버전으로 업로드 ← 자동 수행
 
 다음 단계는 **사용자 직접 수행**이다(보고서 §🙋 사용자가 해야 할 것 참조):
 
+- **콘솔 앱 생성(첫 출시 시)** — 콘솔에서 직접 앱 만들기, 또는 `ait-console register` CLI 수동 실행
 - **upload-assets** — `docs/assets/` 아이콘·화면예시·썸네일 업로드
 - **test-send** — 테스트 발송("푸시 보내기") 실행
 
 각 단계의 성공·실패 결과는 `docs/REPORT-v{version}.md`의 §콘솔 테스트 단계에 기록한다. 단계 실패 시 실패 단계명·스크린샷 경로를 보고서에 남기고 계속 진행하지 않는다.
 
-**Phase C 자동 범위는 register + upload 2종에 한정한다 — 테스트 발송부터는 사용자 직접 수행(보고서 §🙋 사용자가 해야 할 것 참조). 검토 요청·출시는 자동 수행하지 않는다.**
+**Phase C 자동 범위는 upload 1종에 한정한다 — 콘솔 앱 생성(register)은 사용자 직접 수행(보고서 §🙋 사용자가 해야 할 것 참조). 테스트 발송부터도 사용자 직접 수행. 검토 요청·출시는 자동 수행하지 않는다.**
 
 ### 사용자 직접 수행 영역과 적극 추천 의무
 
 **수행은 사용자 직접** — 다음 영역의 콘솔 등록·신청·충전·발송은 사용자가 직접 수행한다. 에이전트는 콘솔을 자동화하지 않는다. (사용자 지시 2026-06-11)
 
+- **콘솔 앱 생성(첫 출시 시)** — 콘솔 경로: 콘솔 → 앱 → 앱 만들기, 또는 `ait-console register` CLI 수동 실행. 파이프라인 자동 단계에서 제외됨
 - **푸시알림 설정** — 알림동의문 등록, 스마트발송 캠페인 생성·설정 (`ait-smart-message`는 설계·추천 전용)
 - **로그인 설정** — 토스 로그인 계약·설정, mTLS 인증서 발급, 복호화 키·AAD 수령, 콜백 등록 (`ait-login`은 코드 산출+체크리스트 안내까지)
 - **프로모션** — 프로모션 등록·신청, 비즈월렛 충전 (`ait-promotion-reward`는 ROI 검토·가이드 전용)
@@ -301,7 +302,7 @@ Phase 8 보고서 생성 직후 `ait-console` 스킬을 통해 콘솔 테스트 
 
 ### Phase C' — 콘솔 테스트 (update 모드, Phase 8' 직후 자동 수행)
 
-Phase C와 동일하되 register를 생략하고 upload(테스트 버전)만 자동 수행한다. test-send·upload-assets는 사용자 직접 수행이다(보고서 §🙋 사용자가 해야 할 것 참조). 결과는 update 보고서에 기록한다.
+Phase C와 동일하되 upload(테스트 버전)만 자동 수행한다(register는 파이프라인 자동 단계 아님). test-send·upload-assets는 사용자 직접 수행이다(보고서 §🙋 사용자가 해야 할 것 참조). 결과는 update 보고서에 기록한다.
 
 ---
 
@@ -475,8 +476,8 @@ create/update 시작 시 대상 디렉토리에 `PIPELINE-LOG.md`가 있으면:
 
 ```
 preflight (PIPELINE-LOG.md 있으면 재개 판정 — 마지막 판정:PASS + 산출물 실재 시 다음 페이즈부터 재개)
-  └─ create:  Phase 0 기획 → 1 디자인 → 2 구현(API 주제는 서버 스모크) → 3 비주얼검증(3-A 외관+3-B 동작+a11y axe-core 스캔+3-C 패널합의) → 4 정적검사 → 5 빌드 → 6 검수셀프체크(APP-SPEC.md 전체 마스터+SUBMIT.md 최소 문서=출시/업데이트 노트+앱 내 기능 생성) → 7 스토어에셋 → 8 완료보고·승인게이트 → C 콘솔 테스트(ait-console: register→upload-assets→upload→test-send 자동, 테스트 발송까지만) → [자동 모드만] 9 git 자동푸시
-  └─ update:  Phase 0' 영향분석(+before캡처) → 1' 스펙갱신 → 2'~6'(create 동일, API 주제는 서버 스모크, Phase 3'은 변경화면만 3-A/3-B/a11y/3-C, 3-C는 before/after 패널 비교, 6'에서 APP-SPEC.md+SUBMIT.md 갱신) → 7' 에셋갱신(조건부) → 8' before/after 비교보고·승인게이트 → C' 콘솔 테스트(ait-console: upload→test-send 자동, 테스트 발송까지만) → [자동 모드만] 9 git 자동푸시
+  └─ create:  Phase 0 기획 → 1 디자인 → 2 구현(API 주제는 서버 스모크) → 3 비주얼검증(3-A 외관+3-B 동작+a11y axe-core 스캔+3-C 패널합의) → 4 정적검사 → 5 빌드 → 6 검수셀프체크(APP-SPEC.md 전체 마스터+SUBMIT.md 최소 문서=출시/업데이트 노트+앱 내 기능 생성) → 7 스토어에셋 → 8 완료보고·승인게이트 → C 콘솔 테스트(ait-console: upload 자동, 콘솔 앱 생성(register)은 사용자 직접 수행) → [자동 모드만] 9 git 자동푸시
+  └─ update:  Phase 0' 영향분석(+before캡처) → 1' 스펙갱신 → 2'~6'(create 동일, API 주제는 서버 스모크, Phase 3'은 변경화면만 3-A/3-B/a11y/3-C, 3-C는 before/after 패널 비교, 6'에서 APP-SPEC.md+SUBMIT.md 갱신) → 7' 에셋갱신(조건부) → 8' before/after 비교보고·승인게이트 → C' 콘솔 테스트(ait-console: upload 자동) → [자동 모드만] 9 git 자동푸시
 
 게이트 미통과 → 원인 페이즈로 반려 (동일 페이즈 5회 초과 시 중단·보고)
 Phase 8/8' 승인 게이트 — 수동 승인(기본): 보고서 생성 후 사용자 승인 대기로 종료(파이프라인 자동 진행 중단, 사람의 유일한 개입 지점) / 자동 모드(--auto): 자동 승인 후 Phase 9 git 자동푸시로 진행

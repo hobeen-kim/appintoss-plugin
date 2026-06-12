@@ -1,5 +1,8 @@
 # Changelog
 
+## 3.8.1 (2026-06-12)
+- create/update 파이프라인에서 콘솔 앱 자동 생성(register) 제외 — register CLI는 유지하되 콘솔 앱 생성은 사용자 직접 수행으로 환원. cmdReleaseWatch 미사용 ctx 파라미터 정리.
+
 ## 3.8.0 (2026-06-12)
 - 콘솔 자동화 경계를 AUTO/MANUAL로 재설계: 자동은 register(첫 콘솔 앱 생성, REST 2-step)·upload(번들 배포, apiKey)·조회(apps/versions/release-status/app-approval-watch)로 한정
 - set-app-info·submit-review·cancel-review·release·test-send를 MANUAL로 전환 — 실행 시 콘솔 직접 수행 안내 출력(exit 0), 자동 write 제거. release-watch는 감지·알림 전용(자동 출시 호출 절단)

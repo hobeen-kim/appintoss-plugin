@@ -466,7 +466,7 @@ async function cmdReleaseStatus(request, appName) {
 // ---------------------------------------------------------------- release-watch (asyncWatch 기반)
 // 안전 규칙: 사용자 "출시해라" 개시 체인(또는 명시 설정)에서만 기동 — --confirm-release 필수.
 // check = release-status(API 우선), onReady = 수동 출시 안내 출력(출시 클릭 없음 — 출시는 수동).
-async function cmdReleaseWatch(ctx, request, appName, flags) {
+async function cmdReleaseWatch(request, appName, flags) {
   const { ws, appId } = await resolveApp(request, appName);
   const intervalMs = parseInterval(flags.interval); // 기본 1h
   const max = flags.max !== undefined ? parseInt(flags.max, 10) : null;
@@ -821,7 +821,7 @@ exit codes: 0 성공/READY · 1 실패(자동 재시도 없음) · 2 인자 오�
     else if (sub === 'versions') await cmdVersions(request, pos[0]);
     else if (sub === 'register') await cmdRegister(request, registerArgs);
     else if (sub === 'release-status') exitCode = await cmdReleaseStatus(request, pos[0]);
-    else if (sub === 'release-watch') exitCode = await cmdReleaseWatch(ctx, request, pos[0], flags);
+    else if (sub === 'release-watch') exitCode = await cmdReleaseWatch(request, pos[0], flags);
     else if (sub === 'app-approval-watch') exitCode = await cmdAppApprovalWatch(request, pos[0], flags);
   } finally {
     await ctx.close();

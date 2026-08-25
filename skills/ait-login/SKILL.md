@@ -1,6 +1,9 @@
 ---
 name: ait-login
-description: 토스 로그인(OAuth2) 연동 가이드. Phase 0~5 순서, mTLS 인증서, 연동 해제 콜백까지. 사용자가 로그인, 인증, OAuth, JWT, 토스 로그인, 회원가입, 사용자 식별 등을 언급하면 이 스킬을 사용한다.
+description: 토스 로그인(OAuth2) 연동 가이드. 콘솔 설정(대표관리자 게이트·동의 항목·약관 3종·연결 끊기 콜백)부터 Phase 0~5 서버·클라이언트 구현, mTLS 인증서까지. 사용자가 로그인, 인증, OAuth, JWT, 토스 로그인, 약관, 동의문, 회원가입, 사용자 식별 등을 언급하면 이 스킬을 사용한다.
+references:
+  - ./references/login-console-setup.md
+  - ./references/login-consent-catalog.md
 ---
 
 # 토스 로그인 연동 가이드
@@ -75,6 +78,12 @@ TOSS_UNLINK_CALLBACK_PASS=<basic-auth-pass>
 
 ### Phase 1: 콘솔 설정
 
+> **콘솔 설정 전체 절차는 `references/login-console-setup.md`를 따른다.** 대표관리자 게이트(약관 동의는 대표관리자 계정에서만 가능 — 아니면 여기서 진행이 멈춘다), 동의 항목 선택 기준, 약관·동의문 등록 두 경로, 만 14세 미만 기본값 함정, 연결 끊기 콜백 referrer 3종, 등록값 표 산출까지 담겨 있다.
+> 드롭다운 선택지(처리 목적 4종·동의문 유형 17종)는 `references/login-consent-catalog.md` 참조 — **공식 문서에 없는 콘솔 실측값**이다.
+>
+> **개발 착수 전에 대표관리자 여부부터 확인한다.** 발주처가 워크스페이스를 만들었다면 협조 요청과 위임 절차가 선행되어야 한다.
+> **외부 LLM(Gemini·OpenAI·Anthropic 등)을 호출하는 앱은 개인정보 국외 이전 동의문이 필수다.**
+
 **동의 항목 추천**: 어떤 사용자 정보를 받을지(이름·이메일·성별·생년월일·내외국인·휴대폰·CI)는 `references/oauth-consent-guide.md`의 최소 수집 원칙으로 추천한다. PLAN.md 기능에 실제 쓰이는 항목만 켜고, 식별은 `userKey`로 충분하나 **이름이 필수 강제라 동의 0개는 불가** — 최소 이름은 켜지고 복호화 필요. **이름·이메일·성별 외 항목을 켜면 연결 끊기 콜백이 필수**임을 자동 판정해 안내한다. 추천 결과는 SUBMIT.md '토스 로그인 설정' 섹션에 표로 출력.
 1. 앱인토스 콘솔 → 토스 로그인 `계약 → 설정` (대표관리자 계정)
 2. **mTLS 인증서** 발급 (콘솔 > 대상 앱 > `mTLS 인증서` 탭 > `+ 발급받기`) → 인증서/키 파일 다운로드
@@ -106,6 +115,12 @@ TOSS_UNLINK_CALLBACK_PASS=<basic-auth-pass>
 **API 응답 래퍼:** 성공 `{"resultType":"SUCCESS","success":{...}}`, 실패 `{"resultType":"FAIL","error":{"errorCode":...,"reason":...}}`. (근거: integration-process.html)
 
 ### Phase 3: 클라이언트 구현
+
+> **진입 즉시 `appLogin()` 호출 금지 (검수 반려 사유).** 앱을 열자마자 로그인을 띄우면 "서비스 설명 없이 즉시 토스 로그인을 유도하고 있어 인트로 페이지 추가가 필요해요"로 반려된다.
+> 첫 화면은 **서비스 소개 인트로**여야 하고, `appLogin()`은 사용자가 [토스로 시작하기] 버튼을 눌렀을 때만 호출한다.
+> - 인트로에 담을 것: 앱이 무엇을 해주는지 한 줄 + 핵심 기능 2~3개 + 로그인 CTA 1개
+> - 인트로 진입 즉시 바텀시트 자동 오픈 금지, 인트로 화면에 인앱 광고 노출 금지 (공홈 consumer-ux-guide)
+> - `useEffect(() => { appLogin() }, [])` 형태의 자동 호출은 그 자체가 반려 패턴이다
 
 ```tsx
 import { appLogin } from '@apps-in-toss/web-framework';
@@ -149,10 +164,29 @@ POST $callback_url   Content-Type: application/json   {"userKey": $userKey, "ref
 - 토큰 만료 → refresh-token 갱신 흐름 테스트
 
 ## 주의사항
+- **로그인 전 인트로 필수** — 진입 즉시 `appLogin()` 자동 호출은 검수 반려(실사례). 버튼 트리거로만 호출한다.
+- **토스 로그인만 허용** — 자사·소셜·간편 로그인 병행 제공은 정책 위반이다. 기능성 푸시·알림, 프로모션, 토스페이도 토스 로그인 연동이 선행되어야 한다.
+- **`user_email`은 `null`일 수 있다** — 토스 가입 시 필수 항목이 아니다. 서버·클라이언트가 null을 허용해야 한다.
+- **CI(`user_ci`)는 개인식별정보(PII)** — 암호화 저장하고 최소 수집 원칙을 지킨다.
+- **AccessToken 유효 시간은 1시간**, `authorizationCode`는 10분·1회용. 서버 API 요청 한도는 앱당 분당 3,000회(초과 시 `4095`).
+- 연결 끊기 콜백의 `referrer`는 `UNLINK`·`WITHDRAWAL_TERMS`·`WITHDRAWAL_TOSS` 3종이다. 어느 경우든 사용자 데이터가 미니앱에 남으면 안 된다(검수 항목).
 - 개인정보는 **암호화되어 반환**(`login-me`) → 서버에서 **AES-256-GCM**으로 복호화. 암호문 앞에 IV(NONCE) 포함, AAD 필요.
 - mTLS 인증서/키, 복호화 키, AAD는 **서버에서만** 사용 (클라이언트 노출 금지).
 - `authorizationCode`는 **10분 유효, 1회용** — 재사용 시 에러.
 - `2026-01-02`부터 응답에 `user_key` 추가 예정 (공지 시점 기준).
+
+## 유저 정보 불러오기 (토스 로그인과 별개 기능)
+
+사용자가 직접 입력하지 않아도 토스에 저장된 정보(이름·성별·내외국인·생년월일·휴대전화번호·주소·이메일)를 동의 후 불러올 수 있다. 배송지 입력, 본인 확인처럼 **폼 입력을 줄이는 용도**다.
+
+- **토스 로그인 없이도 쓸 수 있다.** 별도 서버도 필요 없다. SDK **v2.7.0 이상**.
+- 개인정보 **제3자 제공 동의** 형식으로 동의문이 자동 생성된다.
+- 콘솔 경로: 워크스페이스 > 미니앱 > 좌측 메뉴 **'유저정보 불러오기'** > 등록하기
+- **노출 시점**을 최대 **5개**까지 등록한다. 동의 화면 제목은 입력한 텍스트 뒤에 **"때 필요한 정보를 불러올까요?"**가 자동으로 붙는다(예: `택배 보낼` → "택배 보낼 때 필요한 정보를 불러올까요?").
+- 시점마다 불러올 항목을 다르게 설정할 수 있다. 주소·이메일은 **`null`일 수 있다**.
+- 등록하면 시점별로 `cud_`로 시작하는 `consentedUserDataKey`가 발급된다. SDK에서 이 코드로 정보를 불러온다.
+- 탈퇴 콜백(선택): 미니앱 회원 탈퇴 시 등록한 URL로 이벤트가 오고, 저장 전 `테스트하기`가 성공해야 저장된다.
+- 사용자 철회 경로: 토스 앱 > 설정 > 약관 및 개인정보 처리 동의 > 미니앱 이름 (개별 철회 가능)
 
 ## 불확실하면 공홈 조회
 API·정책·규격·콘솔 화면이 불확실하면 **추측하지 말고 공홈을 먼저 조회**한다.
@@ -163,3 +197,4 @@ API·정책·규격·콘솔 화면이 불확실하면 **추측하지 말고 공�
 - 시작점: https://developers-apps-in-toss.toss.im/
 
 > 검증: 2026-06-09 공홈 대조 [갱신: appLogin 유효시간(10분), generate-token/refresh-token/login-me/logout 정확 경로·필드, login-me 응답 필드, 복호화 AES-256-GCM+IV+AAD, 연동해제 콜백 규격(GET/POST·userKey·referrer 값), API Base URL, scope=사용자 동의값 / 미검증: console.html 404로 콘솔 화면 상세 경로·콜백 응답형식·샌드박스 별도 base URL] — 근거 URL: https://developers-apps-in-toss.toss.im/login/develop.html , https://developers-apps-in-toss.toss.im/development/integration-process.html , https://developers-apps-in-toss.toss.im/login/console.html
+> 갱신: 2026-08-25 — 콘솔 설정 절차·동의문 카탈로그 references 신설(대표관리자 게이트·약관 3종·국외이전·만14세 기본값), Phase 3에 인트로 필수 규칙, 주의사항에 토스 로그인 단독 허용·이메일 null·CI 암호화·토큰 유효시간·QPM 3000·referrer 3종 추가, '유저 정보 불러오기' 절 신설. 근거: guide/authentication/intro.md, guide/authentication/user-info.md, documentation/api/toss-login.md, checklist/app-nongame.md (이슈 #5·#7)

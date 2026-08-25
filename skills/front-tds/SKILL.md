@@ -67,8 +67,12 @@ TDS(@toss/tds-mobile)는 토스 디자인 시스템의 모바일 컴포넌트 �
 > 공식 문서: https://tossmini-docs.toss.im/tds-mobile/
 
 ## 패키지
-- `@toss/tds-mobile` v2.2.1 - 메인 컴포넌트 라이브러리
-- `@toss/tds-mobile-ait` v2.2.1 - 앱인토스 전용 Provider
+- `@toss/tds-mobile` **v2.5.1** - 메인 컴포넌트 라이브러리
+- `@toss/tds-mobile-ait` **v2.5.1** - 앱인토스 전용 Provider
+
+(2026-08-25 npm `latest` 실측. SDK 3.x 마이그레이션 문서는 최소 2.4.1 이상을 요구한다. 설치: `npm i @toss/tds-mobile @toss/tds-mobile-ait @emotion/react@^11 react@^18 react-dom@^18`)
+
+**비게임 미니앱은 TDS 사용이 사실상 필수다** — 커스텀 HTML/CSS UI 요소는 검수에서 반려된다. 다만 **플로팅 탭바 컴포넌트는 TDS에 없어** 직접 스타일링해야 한다(`front-design` 화면 골격 규칙).
 - `@toss/tds-colors` - 색상 토큰
 
 ## 사용 원칙
@@ -184,3 +188,4 @@ alert-dialog, bottom-cta, bottom-sheet, button, fixed-bottom-cta, foundation, li
 
 ### 나머지 reference (총 54종 중 위 17종 외)
 런타임 조회 지침(파일 끝 stale 경고)으로 커버. 사용 시 불확실하면 공홈 조회.
+> 갱신: 2026-08-25 — TDS 버전 2.2.1 → **2.5.1**(npm latest 실측), 설치 커맨드·TDS 필수성·플로팅 탭바 미제공 명시 (이슈 #4)

@@ -9,7 +9,7 @@
 
 ## appName (앱 ID)
 - 앱 스킴 호출 기준 ID. **한 번 등록하면 수정 불가** — 신중히.
-- granite.config.ts의 `appName`과 일치시킨다.
+- `apps-in-toss.config.ts`의 `appName`과 일치시킨다 (SDK 2.x 프로젝트는 `granite.config.ts`).
 
 ## 부제
 - 사용자가 어떤 서비스를 쓸 수 있는지 한눈에 이해되도록 간결하게.

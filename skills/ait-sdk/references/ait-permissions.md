@@ -81,7 +81,7 @@ if (status === 'denied') {
 const image = await openCamera();
 ```
 
-## granite.config.ts 등록
+## apps-in-toss.config.ts 등록 (SDK 2.x 프로젝트는 `granite.config.ts`)
 사용할 권한은 반드시 config에 등록해야 합니다. `{ name, access }` 객체 배열로 지정합니다.
 
 ```typescript

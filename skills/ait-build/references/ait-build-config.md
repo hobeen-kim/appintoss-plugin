@@ -1,61 +1,36 @@
 # 빌드 설정 파일
 
-## granite.config.ts
-앱인토스 앱의 메인 설정 파일. `defineConfig`로 정의합니다.
+## apps-in-toss.config.ts (SDK 3.x)
+
+앱인토스 앱의 메인 설정 파일. `defineConfig`로 정의한다. SDK 2.x의 이름은 `granite.config.ts`이며, 전환은 `npx ait migrate v3`로 한다.
 
 ```typescript
 import { defineConfig } from '@apps-in-toss/web-framework/config';
 
 export default defineConfig({
-  appName: 'my-fin-cal',          // 콘솔에 등록한 앱 ID
+  appName: 'my-fin-cal',           // 콘솔에 등록한 앱 ID(케밥-케이스, 등록 후 변경 불가)
   brand: {
-    displayName: '금융 계산기',    // 사용자에게 노출될 앱 이름
-    primaryColor: '#3182F6',       // 브랜드 기본 색상 (hex)
-    icon: 'https://static.toss.im/icons/png/4x/icon-person-man.png', // 콘솔에서 업로드한 이미지의 URL
+    primaryColor: '#3182F6',       // 브랜드 기본 색상 (#RRGGBB)
   },
-  web: {
-    host: 'localhost',             // 개발 서버 호스트
-    port: 5173,                    // 개발 서버 포트
-    commands: {
-      dev: 'vite',                 // 실행 명령어
-      build: 'tsc -b && vite build', // 빌드 명령어
-    },
+  permissions: [],                 // 런타임 권한 (빈 배열이라도 필수)
+  navigationBar: {                 // 선택
+    withBackButton: true,
+    withTitle: true,
   },
-  permissions: [],                 // 런타임 권한
-  outdir: 'dist',                  // 빌드 산출물 경로
-  webViewProps: {
-    type: 'partner',              // 'game' | 'partner' (게임 또는 비게임)
+  webView: {                       // 선택 (2.x webViewProps)
+    pullToRefreshEnabled: false,
+    overScrollMode: 'never',
   },
+  webBundleDir: 'dist',            // 선택 (2.x outdir), 기본 'dist'
 });
 ```
 
-### defineConfig 전체 스키마 (공홈 기준)
+전체 스키마와 필드별 기본값은 `ait-sdk/references/ait-config.md` 참조.
 
-```typescript
-interface defineConfig {
-  appName: string;        // 콘솔에 등록한 앱 ID
-  brand: {
-    displayName: string;  // 사용자에게 노출될 앱 이름
-    primaryColor: string; // 브랜드 기본 색상 (hex)
-    icon: string;         // 콘솔에서 업로드한 이미지의 URL
-  };
-  web: {
-    host: string;         // 개발 서버 호스트
-    port: number;         // 개발 서버 포트
-    commands: {
-      dev: string;        // 실행 명령어
-      build: string;      // 빌드 명령어
-    };
-  };
-  permissions: Permission[]; // 런타임 권한
-  outdir: string;         // 빌드 산출물 경로
-  webViewProps: {
-    type: 'game' | 'partner'; // 게임 또는 비게임
-  };
-}
-```
+**3.x에 없는 필드** — `brand.displayName`, `brand.icon`, `webViewProps`, `web.host/port/commands`, `outdir`.
+앱 이름·로고는 **콘솔 앱 정보가 단일 출처**이고, 개발 서버 포트와 빌드 명령은 `package.json` scripts에 있다.
 
-### permissions 예시 (공홈)
+### permissions 예시
 
 ```typescript
 permissions: [
@@ -66,19 +41,38 @@ permissions: [
 ],
 ```
 
+## package.json (2.x의 web.commands 이동처)
+
+```json
+{
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "tsc -b && vite build && ait build"
+  }
+}
+```
+
+`build`에 `vite build`와 `ait build`가 **모두** 들어가야 한다. `ait build`만 실행하면 기존 `dist/`를 그대로 포장한다.
+
 ## vite.config.ts
 
 ```typescript
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import aitDevtools from '@apps-in-toss/devtools/unplugin';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    aitDevtools.vite(),   // 로컬 브라우저 테스트 도구 (3.x)
+    react(),
+  ],
   server: {
     host: true,  // 네트워크 접근 허용
   },
 });
 ```
+
+`@apps-in-toss/devtools`는 3.x 스캐폴드·`ait migrate v3` 시 자동 설정된다. 3.0.1에서 올라온 프로젝트만 수동 설치(`npm i -D @apps-in-toss/devtools`)가 필요하다. 다른 번들러는 `aitDevtools.webpack()` 등 어댑터를 쓴다.
 
 ## tsconfig.app.json (주요 옵션)
 
@@ -96,16 +90,10 @@ export default defineConfig({
 }
 ```
 
-## .granite/app.json
-granite build 시 자동 생성되는 앱 메타데이터.
+## 빌드 시 검증되는 항목
 
-```json
-{
-  "appName": "my-fin-cal",
-  "permissions": []
-}
-```
+`ait build`(3.0.4+)는 `appName`·`brand`·`webBundle` 설정을 검증한다. 값이 없거나 형식이 틀리면 빌드가 실패한다.
 
 ---
-> 검증: 2026-06-07 공홈 대조 [갱신됨: defineConfig 스키마에 outdir 필드 추가, webViewProps.type = 'game' | 'partner' 명시, brand.icon은 로컬 경로가 아닌 콘솔 업로드 이미지 URL, permissions 객체 예시 추가 — 근거: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/UI/Config.html]
+> 검증: 2026-08-25 공홈 + npm 실측 대조 [전면 개정: 3.x 스키마로 재작성. granite.config.ts→apps-in-toss.config.ts, displayName·icon·web·outdir·webViewProps 제거, navigationBar·webView·webBundleDir 반영, AIT Devtools 플러그인·빌드 검증 추가. 실측: @apps-in-toss/web-framework@3.1.1] 근거: https://developers-apps-in-toss.toss.im/documentation/integration/sdk-3.x , https://developers-apps-in-toss.toss.im/release-note/release-note
 > 이 문서가 stale일 수 있다. 불확실하면 공홈 조회: https://developers-apps-in-toss.toss.im/

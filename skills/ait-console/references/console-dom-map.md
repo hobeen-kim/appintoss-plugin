@@ -153,7 +153,7 @@ DOM 진입: 앱 정보 `/mini-app/{app}/meta` → 버튼 **`수정하기`**(편�
 - **file input(편집 모드에서만 렌더, 4개)**: `input[type=file][accept=".png, .PNG"]`(로고/썸네일, class `_8t6e210`) + `input[type=file][accept=".jpg,.jpeg,.png"]`(스크린샷류, class `css-1hyfx7x`). 조회 모드(`수정하기` 전)에는 file input 0개.
 - Playwright 업로드: `수정하기` 클릭 → `page.locator('input[type=file]').nth(0).setInputFiles('<icon>.png')`.
 - **업로드 API(확정, 번들과 다름 — presigned S3 아님)**: `POST /console/api-public/v3/appsintossconsole/resource/{ws}/upload`, **`multipart/form-data`**, **파일 파트 필드명 = `resource`**(실측 확정; `file`/`image`/`multipartFile`/`files` 등은 errorCode 4000 거부), 쿠키 세션 → 응답 `{ resultType:"SUCCESS", success:"<발급 URL>" }`. **`success` 문자열이 발급된 `https://static.toss.im/appsintoss/{ws}/<uuid>.png`**. → **API 대체: 가능**(`multipart{ resource: file }` POST 1회로 URL 발급).
-- 용도: 발급된 static URL을 ① 앱 정보 draft PUT 의 `miniApp.images[]`/`iconUri` 에 사용 ② granite.config.ts `brand.icon`. **brand.icon 은 반드시 이 콘솔 발급 static URL**.
+- 용도: 발급된 static URL을 앱 정보 draft PUT 의 `miniApp.images[]`/`iconUri` 에 사용한다. (SDK 2.x 프로젝트라면 `granite.config.ts`의 `brand.icon`에도 **반드시 이 콘솔 발급 static URL**을 넣는다. **SDK 3.x에는 `brand.icon` 필드가 없다** — 콘솔 앱 정보가 단일 출처.)
 - 실측: 아이콘·다크로고·스크린샷3·썸네일 모두 이 API로 업로드. 썸네일 업로드 시 서버가 `backgroundColor`(예 `#1a5882`)를 자동 추출해 images 항목에 채움.
 
 ### 단계 0-B) 앱 정보(스토어 정보) 등록 — **draft PUT API + readback (fixed-cost-keeper 실측)**

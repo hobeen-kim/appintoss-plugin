@@ -65,7 +65,7 @@
 {plan.md 기반으로 라우팅, 페이지 구조 정리}
 
 ## AIT 빌드 & 배포
-- `granite.config.ts`: 앱 설정 (appName: '{앱이름}', port: 5173)
+- `apps-in-toss.config.ts`: 앱 설정 (appName: '{앱이름}', brand.primaryColor, permissions). 개발 서버 포트·빌드 명령은 `package.json` scripts에 있다 (SDK 2.x 프로젝트는 `granite.config.ts`)
 - `npx ait build` → `{앱이름}.ait` 번들 생성
 - TDSProvider 조건부 분기: AIT → TDSMobileAITProvider, 브라우저 → TDSMobileProvider
 

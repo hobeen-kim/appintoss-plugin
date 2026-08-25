@@ -9,7 +9,7 @@ read -r -d '' CTX <<'RULES' || true
 
 1. 스크린샷·이미지 보고는 **md 파일에 `![](상대경로)`로 임베드**하고 채팅엔 그 **md 절대경로 1줄만** 제시한다. 채팅에 경로를 나열하지 않는다(터미널은 이미지 인라인 불가). 보고 전 Read로 이미지를 확인한다.
 2. 작업 완료 보고는 주요 산출물의 **절대경로**를 출력한다(REPORT·SUBMIT·.ait·assets 등). 사용자가 바로 열 수 있게.
-3. 빌드는 `npx ait build`(구 granite build 폐기) + 재빌드 시 `npm version patch --no-git-tag-version` 필수.
+3. 빌드는 **`npm run build`**(= `tsc -b` → `vite build` → `ait build` 3단계). `npx ait build` **단독 실행 금지** — 웹 번들을 다시 만들지 않고 기존 `dist/`를 그대로 `.ait`로 포장해 옛 코드가 배포된다. 재빌드 시 `npm version patch --no-git-tag-version` 필수이며, 빌드 후 `.ait` 산출물에 새 버전 문자열이 실제로 들어갔는지 grep으로 확인한다. 상세는 `ait-build` 스킬.
 4. 토스 로그인: **이름(user_name)은 필수 동의 강제** → 동의 0개 불가, 복호화 키·AAD·복호화 로직 항상 필요. 약관 URL 필수.
 5. 되묻지 말고 자동 진행한다(코드로 판정 → 자동 산출 → 콘솔 수동항목만 1회 일괄 요청).
 6. 콘솔 정책·규격이 불확실하면 추측하지 말고 공홈(https://developers-apps-in-toss.toss.im/) 또는 ax MCP로 확인한다.

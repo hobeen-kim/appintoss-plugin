@@ -205,7 +205,7 @@ async function cmdVersions(request, appName) {
 // 번들을 못 읽어 AccessDenied 발생 → 폐기(lib/api.cjs DEPRECATED 주석 참조).
 // 공식 경로: <projectDir>/node_modules/.bin/ait deploy [--location <.ait>]
 // (-m/--memo 는 CLI 버전에 따라 미지원 — `ait deploy --help`로 감지해 지원 시에만 부착)
-// — 앱 프로젝트 디렉터리를 cwd로 실행(granite.config 사용). 인증은 API 키 토큰
+// — 앱 프로젝트 디렉터리를 cwd로 실행(apps-in-toss.config / 2.x는 granite.config). 인증은 API 키 토큰
 // (`ait token add --api-key <key>`, 토큰은 ~/.ait/credentials 저장).
 
 function execFileP(file, args, opts) {
@@ -270,7 +270,7 @@ async function cmdUpload(projectDir, flags) {
   const bundle = typeof flags.bundle === 'string' ? path.resolve(flags.bundle) : null;
   announceWrite('upload (공식 ait deploy — 테스트 버전 배포)', {
     프로젝트: projectDir,
-    번들: bundle || '(ait 기본 — projectDir 내 .ait, granite.config 기준)',
+    번들: bundle || '(ait 기본 — projectDir 내 .ait, apps-in-toss.config 기준)',
     memo,
     효과: '새 테스트 버전 배포(deeplink 발급). 검토 요청/출시는 수행하지 않음',
   });

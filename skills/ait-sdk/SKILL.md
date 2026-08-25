@@ -39,7 +39,7 @@ references:
 
 | 카테고리 | 모듈 | 설명 |
 |---------|------|------|
-| 설정 | `defineConfig` | granite.config.ts 앱 설정 |
+| 설정 | `defineConfig` | apps-in-toss.config.ts 앱 설정 (2.x: granite.config.ts) |
 | 저장소 | `Storage` | 네이티브 로컬 저장소 (Promise 기반) |
 | 이벤트 | `graniteEvent`, `tdsEvent` | 백/홈 버튼, 네비게이션 이벤트 |
 | 권한 | `fetchAlbumPhotos`, `openCamera` 등 | 카메라, 앨범, 위치, 연락처, 클립보드 |
@@ -99,9 +99,19 @@ const isAIT = typeof window !== 'undefined' && Boolean(
 );
 ```
 
-## SDK 3.0 모니터링
+## SDK 버전 (2026-08-25 실측)
 
-SDK 3.0 beta가 npm에 존재 — `granite.config.ts`→`apps-in-toss.config.ts` 개명, brand에서 displayName/icon 제거, webViewProps→webView, outdir→webBundleDir 등 breaking change. 정식 전환 모니터링 필요.
+| 패키지 | latest | beta |
+|---|---|---|
+| `@apps-in-toss/web-framework` · `@apps-in-toss/cli` | **3.1.1** | 3.1.0-beta.1 |
+| `@apps-in-toss/framework` (React Native) | 2.10.10 | 2.11.0-beta.1 |
+| `@toss/tds-mobile` · `@toss/tds-mobile-ait` | **2.5.1** | — |
+
+3.0.0 정식은 2026-07-31 릴리스됐다. 3.x는 **breaking change**다 — `granite.config.ts`→`apps-in-toss.config.ts`, brand에서 displayName/icon 제거, `webViewProps`→`webView`(type 삭제), `outdir`→`webBundleDir`, `web` 블록 삭제(→ package.json scripts). 상세와 마이그레이션 절차는 `references/ait-config.md` 참조.
+
+**신규 프로젝트는 3.x 기준으로 만든다.** 2.x 프로젝트는 `npx ait migrate v3`로 전환하되, 3.x 출시 후에는 2.x로 롤백할 수 없고 `localStorage` 직접 사용 앱은 데이터 접근이 끊기므로 먼저 확인한다.
+
+버전 확인: `npm view @apps-in-toss/web-framework dist-tags`
 
 ## 문서 신선도
 

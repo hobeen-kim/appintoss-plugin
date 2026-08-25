@@ -8,6 +8,10 @@ trigger: 콘솔 자동화, 콘솔 제출, 앱 등록, 앱 정보 등록, set-app
 
 앱인토스 Developer Center 콘솔(`apps-in-toss.toss.im`)을 사람이 직접 열지 않고 명령·크론으로 모두 처리한다. 단일 진입점 `skills/ait-console/scripts/ait-console.cjs`의 서브커맨드를 사용한다.
 
+> **공식 콘솔 MCP가 존재한다 (2026-08 확인).** 앱인토스는 콘솔 작업용 MCP를 제공한다 — 엔드포인트 `https://mcp.toss.im/adapters/apps-in-toss-console/mcp`, Client ID `mcp-gateway`(연결 후 브라우저 인증 필요). 문서 MCP는 `https://developers-apps-in-toss.toss.im/~gitbook/mcp`.
+> 이 스킬의 Playwright DOM 자동화는 MCP가 없던 시기에 만든 것이다. **콘솔 UI 변경에 취약하므로, 공식 MCP로 대체 가능한 작업(앱 등록·앱 정보·상태 조회 등)은 MCP를 우선 검토한다.** 다만 이 플러그인의 파이프라인은 아직 MCP 커버리지를 검증하지 않았으므로, 검증 전까지는 아래 서브커맨드가 기본 경로다.
+> 근거: https://developers-apps-in-toss.toss.im/ai-vibe-coding/intro , https://developers-apps-in-toss.toss.im/guide/console-mcp
+
 ---
 
 ## 1. 서브커맨드 목록 및 실행 절차
@@ -63,7 +67,9 @@ node ait-console.cjs cancel-review <appName> --confirm
 - create 끝: `upload`(테스트 버전). `register`(콘솔 앱 생성)는 파이프라인 자동 단계 아님 — 사용자가 콘솔에서 직접 앱 만들기 또는 `register` CLI 수동 실행
 - update 끝: `upload`(테스트 버전)
 
-`set-app-info`는 docs/APP-SPEC.md(부제·상세설명·카테고리 1순위·검색키워드)와 docs/assets(icon·screenshot-1~3·thumbnail)를 콘솔에 반영한다. 기본은 **draft 저장+readback 검증까지만**이며, **앱정보 검수 제출(POST mini-app/review)은 `--submit` 명시 시에만** 수행한다. 업로드된 아이콘의 콘솔 발급 static URL은 출력으로 안내되므로 granite.config.ts `brand.icon`을 이 URL로 갱신한다.
+`set-app-info`는 **v3.8.0부터 MANUAL**이다 — 스크립트는 안내만 출력하고, 앱 정보·에셋 입력은 사용자가 콘솔에서 직접 수행한다(콘솔 → 앱 → 앱 정보 → 수정하기). 에이전트는 docs/APP-SPEC.md(부제·상세설명·카테고리 1순위·검색키워드)와 docs/assets(icon·screenshot-1~3·thumbnail)를 **옮겨 적을 수 있는 형태로 산출**하는 데까지 관여한다.
+
+콘솔에 아이콘을 올리면 발급되는 static URL은 **SDK 2.x 프로젝트에서만** `granite.config.ts`의 `brand.icon`에 넣는다. **SDK 3.x(`apps-in-toss.config.ts`)에는 `brand.icon`·`brand.displayName` 필드가 없으므로 갱신할 대상이 없고, 로고·앱 이름의 단일 출처는 콘솔 앱 정보다.**
 
 **출시 상태머신** (사용자 "출시해라" 명시 명령에서만 개시):
 

@@ -1,6 +1,6 @@
 ---
 name: ait-review
-description: 앱인토스 미니앱 검수 기준 및 출시 전 11단계 체크리스트. 21개 앱 실제 반려 사례 기반. granite.config.ts 검증, package.json 의존성, TDS Provider 분기, AI 생성 콘텐츠, 어뷰징 방지, 콘솔 설정 확인까지 포함.
+description: 앱인토스 미니앱 검수 기준 및 출시 전 11단계 체크리스트. 21개 앱 실제 반려 사례 기반. apps-in-toss.config.ts 검증, package.json 의존성, TDS Provider 분기, AI 생성 콘텐츠, 어뷰징 방지, 콘솔 설정 확인까지 포함.
 trigger: 앱인토스 검수, 리뷰 기준, 제출 전 체크리스트, 앱 등록 규칙, 출시 점검, 심사 준비, 제출 전 확인, 반려 방지 관련 질문 시 트리거
 references:
   - ./references/ait-review-checklist.md

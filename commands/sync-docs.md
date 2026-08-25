@@ -17,28 +17,45 @@ argument-hint: "[생성 앱 경로 — docs/DRIFT.md 소비용, 생략 가능]"
 
 ### 1단계: 공홈 대조 — 드리프트 목록 산출
 
-- 공홈 인덱스 https://developers-apps-in-toss.toss.im/llms.txt 와 전문 https://developers-apps-in-toss.toss.im/llms-full.txt 를 조회하여, 번들 reference(`skills/ait-sdk`·`skills/front-tds` 등 `skills/*/references/`)와 대조한다.
+- 공홈 인덱스 https://developers-apps-in-toss.toss.im/llms.txt 와 전문 https://developers-apps-in-toss.toss.im/llms-full.txt 를 **파일로 받아** 번들 reference(`skills/*/references/`, `knowledge/`)와 대조한다.
+  ```bash
+  curl -s https://developers-apps-in-toss.toss.im/llms.txt      -o /tmp/ait-llms.txt
+  curl -s https://developers-apps-in-toss.toss.im/llms-full.txt -o /tmp/ait-llms-full.txt
+  ```
+  `llms-full.txt`는 상위 100여 개 문서의 전문을 담지만 **뒤쪽 SDK API 레퍼런스는 잘려 있다.** 개별 API 문서는 URL 뒤에 `.md`를 붙여 따로 받는다.
+  특정 질문은 `GET {페이지}.md?ask=<질문>`으로 바로 물어볼 수도 있다.
+- 개별 문서가 필요하면 `mcp__apps-in-toss__get_doc` / `list_examples`도 쓸 수 있으나, 검색 인덱스가 비어 있는 경우가 있어 **`llms-full.txt` 대조를 기본 경로로 삼는다.**
 - TDS는 https://tossmini-docs.toss.im/tds-mobile/llms.txt 와 대조한다.
 - 입력으로 받은 생성 앱 `docs/DRIFT.md` 항목을 병합하여 **드리프트 목록**(문서 경로 · 번들 기술 내용 · 공홈 실제 내용 · 출처 URL)을 산출한다.
 
-### 2단계: npm 버전 대조
+### 2단계: npm 버전 대조 (dist-tags 전수)
 
-- registry.npmjs.org에서 `@apps-in-toss/web-framework`의 latest 버전을 확인한다:
+- 관련 패키지의 **dist-tags를 한 번에** 확인한다. latest뿐 아니라 **beta도 함께 본다** — beta에 다음 메이저가 올라와 있으면 곧 같은 드리프트가 반복된다.
   ```bash
-  curl -s https://registry.npmjs.org/@apps-in-toss/web-framework/latest | jq -r .version
+  for p in @apps-in-toss/web-framework @apps-in-toss/cli @apps-in-toss/framework \
+           @apps-in-toss/devtools @toss/tds-mobile @toss/tds-mobile-ait; do
+    echo -n "$p: "; npm view "$p" dist-tags --json
+  done
   ```
-- 번들 문서에 기재된 버전·API 시그니처와 대조하여 버전 드리프트를 목록에 추가한다.
+- **메이저 변경이 감지되면 설정 스키마 드리프트를 의심한다.** 실제 타입 정의를 설치해 확인하는 것이 가장 확실하다:
+  ```bash
+  npm i @apps-in-toss/web-framework@latest --prefix /tmp/ait-verify --no-audit --no-fund
+  cat /tmp/ait-verify/node_modules/@apps-in-toss/web-framework/dist/config.d.ts
+  ```
+- CLI 커맨드·옵션이 바뀌었는지도 함께 본다(`npx ait --help`, `npx ait <cmd> --help`). 숨은 플래그는 `dist/index.js`에서 `Option.` 정의를 grep한다.
+- 번들 문서에 기재된 버전·API 시그니처·설정 필드와 대조해 드리프트 목록에 추가한다.
+- **`skills/ait-sdk/SKILL.md`의 "SDK 버전" 표를 실측값으로 갱신한다.**
 
 ### 3단계: 릴리즈 노트 확인
 
-- **주의: 공홈 릴리즈 노트 페이지 본문은 클라이언트 렌더링이라 일반 fetch(WebFetch·curl)로는 빈 응답만 온다.** 원문은 JS 청크 `assets/release-note.md.*.lean.js`를 curl로 직접 받아야 확보할 수 있다:
-  ```bash
-  # 1) 페이지 HTML에서 청크 파일명 추출
-  curl -s https://developers-apps-in-toss.toss.im/release-note.html | grep -o 'assets/release-note\.md\.[^"]*\.lean\.js'
-  # 2) 청크를 직접 받아 원문 확인
-  curl -s https://developers-apps-in-toss.toss.im/assets/release-note.md.{hash}.lean.js
-  ```
+공홈은 모든 페이지의 **마크다운 원문**을 URL 뒤에 `.md`를 붙여 제공한다. 릴리즈 노트도 마찬가지다.
+
+```bash
+curl -s https://developers-apps-in-toss.toss.im/release-note/release-note.md
+```
+
 - 릴리즈 노트에서 SDK·정책·콘솔 변경 사항을 확인하고, 번들 문서에 미반영된 변경을 드리프트 목록에 추가한다.
+- **날짜가 적힌 정책 전환(예: "N월 N일 이후 업로드되는 번들부터 …")은 별도로 표시**한다. 시점 전후로 동작이 달라지므로 번들 문서에 조건부로 기술해야 한다.
 
 ### 4단계: reference 갱신
 

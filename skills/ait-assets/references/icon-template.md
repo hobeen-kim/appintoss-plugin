@@ -38,7 +38,7 @@
 
 ## HTML + SVG 템플릿
 
-`icon.html`로 저장한다. `--brand`를 앱의 granite.config.ts primaryColor로 교체한다.
+`icon.html`로 저장한다. `--brand`를 앱의 `apps-in-toss.config.ts` `brand.primaryColor`로 교체한다.
 
 ```html
 <!doctype html>
@@ -47,7 +47,7 @@
   <meta charset="utf-8" />
   <style>
     :root {
-      --brand: #3182f6;        /* granite.config.ts primaryColor */
+      --brand: #3182f6;        /* apps-in-toss.config.ts brand.primaryColor */
       --brand-2: #1b64da;      /* 그라데이션 종점 (단색이면 --brand와 동일) */
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }

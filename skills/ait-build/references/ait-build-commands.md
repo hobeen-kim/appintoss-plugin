@@ -21,11 +21,24 @@ npm run dev -- --port 5175
 # 버전 범프 (빌드 전 필수 — 콘솔은 동일 버전 재업로드 거부)
 npm version patch --no-git-tag-version   # package.json version 증가 (최초 빌드는 생략 가능)
 
-# 웹 빌드 (타입 체크 + 번들링)
-npm run build        # tsc -b && vite build → dist/ 폴더 생성
+# 전체 빌드 (권장) — tsc -b && vite build && ait build
+npm run build
 
-# AIT 번들 생성
-npx ait build    # granite.config.ts 기반 → {appName}.ait 파일 생성 (구 granite build는 웹 프로젝트 폐기)
+# 개별 단계 (디버깅용)
+npx tsc -b           # 타입 체크
+npx vite build       # 웹 번들 -> dist/
+npx ait build        # apps-in-toss.config.ts 기반 -> {appName}.ait 생성
+```
+
+> **`npx ait build` 단독 실행 금지.** `ait build`는 `dist/`를 다시 만들지 않고 **있는 그대로 포장**한다. 코드 수정 후 이 명령만 실행하면 버전만 올라간 stale 번들이 생성되며 빌드는 성공으로 끝난다. 재빌드는 항상 `npm run build`.
+
+## 산출물 검증 (재빌드 시 필수)
+
+```bash
+VER=$(node -p "require('./package.json').version")
+OUT=$(mktemp -d)
+unzip -q -o *.ait -d "$OUT"
+grep -rq "$VER" "$OUT" && echo "OK: $VER 반영됨" || echo "FAIL: stale dist — vite build 누락"
 ```
 
 ## 미리보기

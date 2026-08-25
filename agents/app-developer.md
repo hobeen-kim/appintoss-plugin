@@ -24,13 +24,13 @@ skills:
 - React + TypeScript + Vite
 - `@toss/tds-mobile` (TDS) — UI 컴포넌트
 - `@apps-in-toss/web-framework` — 앱인토스 웹 프레임워크/SDK
-- `granite.config.ts` 작성 포함 (web-framework 빌드 설정)
+- `apps-in-toss.config.ts` 작성 포함 (web-framework 3.x 빌드 설정) (SDK 2.x 프로젝트는 `granite.config.ts`)
 
 `DESIGN.md`에 정의된 페이지별 화면 구조·TDS 컴포넌트·상태·플로우를 빠짐없이 코드로 옮긴다. API가 필요한 주제는 back-developer가 선행 작성한 `API.md` 명세를 참조해 호출부를 구현한다.
 
 ## 스캐폴드
 
-신규 프로젝트는 공식 생성기 `npx create-ait-app {appName}`를 우선 사용한다(프롬프트에서 TDS 사용 **Y** 선택). 비대화형 환경이거나 생성기 실행이 실패하면 검증된 수동 스캐폴드(`package.json` / `vite` 설정 / `granite.config.ts`)로 폴백한다.
+신규 프로젝트는 공식 생성기 `npx create-ait-app {appName}`를 우선 사용한다(프롬프트에서 TDS 사용 **Y** 선택). 비대화형 환경이거나 생성기 실행이 실패하면 기존 웹 프로젝트에 `npx ait init --app-name {kebab-case-name} --skip-input`으로 SDK를 붙인다(`--skip-input` 없이 호출하면 "웹 번들 디렉터리" 프롬프트에서 멈춘다). 앱 이름은 **케밥-케이스만** 허용된다. 그래도 실패하면 수동 스캐폴드(`package.json` / `vite` 설정 / `apps-in-toss.config.ts`)로 폴백한다.
 
 ## Presentation / Logic 분리
 

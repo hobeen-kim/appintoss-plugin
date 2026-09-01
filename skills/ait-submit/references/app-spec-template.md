@@ -87,6 +87,20 @@
 
 <!-- 이전 버전 노트는 아래에 그대로 보존 -->
 
+## 화면 흐름도
+
+> 제작 표준: `ait-submit/references/screen-flow-guide.md` · 렌더: `node .../scripts/render-flow.cjs docs/screen-flow.html`
+> 프레임 내용은 `qa-screens/` 실촬 스크린샷 사용이 기본. 캡션 코드는 아래 「앱 내 기능 — 상세」 표와 1:1 대응.
+
+![screen-flow](screen-flow.png)
+
+| 항목 | 값 |
+|---|---|
+| 소스 | docs/screen-flow.html |
+| 화면 수 | {N}개 |
+| 기능 그룹(레인) | {그룹명 나열} |
+| 예외·실패 경로 | {표기한 예외 흐름 요약 — 최소 1개} |
+
 ## 앱 내 기능 — 상세
 
 > 콘솔은 최대 3개만 등록하지만 여기엔 모든 화면·기능 기록. 공식 규격(2026-06-10 공홈 확인):

@@ -2,6 +2,8 @@
 name: ait-submit
 description: 앱인토스 미니앱 제출 전 최종 검수 및 출시노트/기능 목록 작성. ait-review 검수 실행 후 docs/SUBMIT.md에 출시 노트, 앱 내 기능(한/영 이름, 딥링크 URL)을 자동 생성한다. 사용자가 제출, 출시, 서브밋, submit, 기능 목록, 출시 노트, release note, 앱 등록, 콘솔 제출 등을 언급하면 이 스킬을 사용한다.
 trigger: 제출, 출시, 서브밋, submit, 기능 목록, 출시 노트, 앱 등록, 콘솔 제출
+references:
+  - ./references/screen-flow-guide.md
 ---
 
 # 앱인토스 제출 가이드
@@ -119,6 +121,25 @@ APP-SPEC.md(전체 마스터)를 먼저 모두 채운 뒤, 그중 **출시/업�
 |----------------|---------------|----------|
 | 홈 | Home | intoss://{appName}/ |
 | ... | ... | ... |
+
+#### 화면 흐름도 — APP-SPEC.md에 작성 (`docs/screen-flow.png`)
+
+전 화면이 서로 어떻게 연결되는지 보여주는 **단일 캔버스 지도**를 만들어 APP-SPEC에 임베드한다.
+제작 표준(골격 HTML/CSS·스타일 규칙·자가 점검)은 **`references/screen-flow-guide.md`가 단일 출처**다.
+
+- **프레임 안은 Phase 3 실촬 스크린샷(`qa-screens/`)을 넣는 것이 기본**이다 — 이미 있는 이미지를 두고 목업을 새로 그리지 않는다. 스크린샷이 없는 기획 단계에서만 목업 모드를 쓴다.
+- **추상 노드 박스 순서도(START/S01 사각형 + 화살표)는 화면 흐름도로 인정하지 않는다.** 실제 화면 모습이 없으면 흐름을 눈으로 확인할 수 없다.
+- 캡션 코드(A1·B2…)는 아래 **「앱 내 기능 목록」표의 행과 1:1로 맞춘다.** 두 산출물의 화면 집합이 어긋나면 안 된다.
+- 콘솔에 등록할 딥링크 화면에는 `intoss://{appName}/경로` 배지를 단다 — "URL 미접속" 반려를 사전 점검할 수 있다.
+- 기본 흐름 외에 **예외·실패 경로를 최소 1개** 표기한다.
+
+```bash
+# HTML 작성 후 PNG 렌더 (playwright → 전역 npm → Chrome headless 순으로 자동 폴백)
+node "$CLAUDE_PLUGIN_ROOT/skills/ait-submit/scripts/render-flow.cjs" docs/screen-flow.html
+# exit 0 정상 / 3 = 렌더는 됐으나 빈 프레임·깨진 이미지 있음(경고 확인 후 수정) / 1·2 = 실패
+```
+
+APP-SPEC.md에는 `![screen-flow](screen-flow.png)` 로 임베드한다. **콘솔에 업로드하는 에셋이 아니다** — 내부 문서 자산이며, 스토어 노출용 화면 예시(`docs/assets/screenshot-*.png`)와 용도가 다르다.
 
 #### 콘솔 대조 항목 — APP-SPEC.md에 작성
 - `apps-in-toss.config.ts`에서 `appName`·`brand.primaryColor` 추출 (3.x에는 `displayName`·`icon` 필드가 없다 — 앱 이름·로고는 **콘솔 앱 정보가 단일 출처**)

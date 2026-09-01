@@ -67,7 +67,7 @@ node ait-console.cjs cancel-review <appName> --confirm
 - create 끝: `upload`(테스트 버전). `register`(콘솔 앱 생성)는 파이프라인 자동 단계 아님 — 사용자가 콘솔에서 직접 앱 만들기 또는 `register` CLI 수동 실행
 - update 끝: `upload`(테스트 버전)
 
-`set-app-info`는 **v3.8.0부터 MANUAL**이다 — 스크립트는 안내만 출력하고, 앱 정보·에셋 입력은 사용자가 콘솔에서 직접 수행한다(콘솔 → 앱 → 앱 정보 → 수정하기). 에이전트는 docs/APP-SPEC.md(부제·상세설명·카테고리 1순위·검색키워드)와 docs/assets(icon·screenshot-1~3·thumbnail)를 **옮겨 적을 수 있는 형태로 산출**하는 데까지 관여한다.
+`set-app-info`는 **v3.8.0부터 MANUAL**이다 — 스크립트는 안내만 출력하고, 앱 정보·에셋 입력은 사용자가 콘솔에서 직접 수행한다(콘솔 → 앱 → 앱 정보 → 수정하기). 에이전트는 docs/APP-SPEC.md(부제·상세설명·카테고리·검색키워드)와 docs/assets(icon·screenshot-1~3·thumbnail)를 **옮겨 적을 수 있는 형태로 산출**하는 데까지 관여한다. 카테고리는 **콘솔 대/중/소 3단 전체 경로 1개**를 확정해 적는다(대안은 후보일 뿐 복수 선택 아님, `ait-submit/references/categories.md` 참조). 부제·상세 설명의 허용 특수문자는 `:` `·` `?` 뿐이다.
 
 콘솔에 아이콘을 올리면 발급되는 static URL은 **SDK 2.x 프로젝트에서만** `granite.config.ts`의 `brand.icon`에 넣는다. **SDK 3.x(`apps-in-toss.config.ts`)에는 `brand.icon`·`brand.displayName` 필드가 없으므로 갱신할 대상이 없고, 로고·앱 이름의 단일 출처는 콘솔 앱 정보다.**
 

@@ -54,8 +54,12 @@ const handleComplete = async () => {
 };
 ```
 
-### requestNotificationAgreement
+### Notification.requestAgreement (구 `requestNotificationAgreement`)
 알림 수신 동의 요청 UI를 띄웁니다. — SDK 2.5.0 도입 (플랜 제공 정보, 공홈 개별 문서에는 버전 미명시 — 릴리즈 노트 조회 실패 2026-06-10)
+
+> **`requestNotificationAgreement`는 deprecated다.** `@apps-in-toss/web-framework@3.1.1` 타입 정의:
+> `@deprecated 이 함수는 더 이상 사용되지 않아요. Notification.requestAgreement를 사용해주세요.` (`@since` Toss Android 5.255.0, iOS 5.255.0)
+> 신규 코드는 `Notification.requestAgreement`를 쓴다. 시그니처는 동일하다.
 ```typescript
 function requestNotificationAgreement(params: {
   options: {
@@ -68,13 +72,15 @@ function requestNotificationAgreement(params: {
 type NotificationAgreementResult = 'newAgreement' | 'alreadyAgreed' | 'agreementRejected';
 ```
 - import: WebView `@apps-in-toss/web-framework`, RN `@apps-in-toss/framework`
-- `templateCode`: 콘솔 → 스마트 메시징 → 알림 동의 탭에서 등록한 템플릿 코드
+- `templateCode`: **콘솔 → 스마트 발송 → `기능성` 탭**에서 확인한다. 등록은 `알림동의문` 탭에서 하지만 발급된 코드는 **다른 탭(기능성)** 에 표시된다(공홈 `guide/marketing/smart-message`). 등록 화면 입력 항목은 `ait-smart-message` 스킬 참조
 - 반환값은 cleanup 함수 — 이벤트 리스너 해제용, 반드시 호출
 - 결과: `newAgreement`(신규 동의) / `alreadyAgreed`(이미 동의) / `agreementRejected`(거부)
 - 출처: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/인터렉션/requestNotificationAgreement.md
 
 ```tsx
-const cleanup = requestNotificationAgreement({
+import { Notification } from '@apps-in-toss/web-framework';
+
+const cleanup = Notification.requestAgreement({
   options: { templateCode: 'your-template-code' },
   onEvent: ({ type }) => {
     if (type === 'newAgreement') console.log('신규 동의');
@@ -91,7 +97,7 @@ const cleanup = requestNotificationAgreement({
 
 ## 주의사항
 - `requestReview`: 같은 세션에서 반복 호출 금지. 리뷰 노출 여부에 보상·진행을 걸지 말 것. 목표 달성 등 만족 시점에만 호출
-- `requestNotificationAgreement`: 콘솔에 알림 동의 템플릿을 먼저 등록하지 않으면 UI 미표시. cleanup 미호출 시 리스너 중복 등록·메모리 누수
+- `Notification.requestAgreement`: 콘솔에 알림 동의 템플릿을 먼저 등록하지 않으면 UI 미표시. cleanup 미호출 시 리스너 중복 등록·메모리 누수. **구 `requestNotificationAgreement`는 deprecated**
 - 동의 이후 실제 메시지 발송은 자체 서버에서 트리거
 
 ## 출처

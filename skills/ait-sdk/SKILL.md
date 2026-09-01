@@ -52,7 +52,7 @@ references:
 | 토스페이 | `TossPay.checkoutPayment` | 토스페이 결제창, 자동결제 |
 | 화면 제어 | `setDeviceOrientation`, `setScreenAwakeMode`, `setSecureScreen`, `closeView` 등 | 화면 방향, 꺼짐 방지, 캡처 방지, 뷰 닫기 |
 | 화면 이동 | `openURL`, Routing | 외부 URL, 화면 간 이동, 외부링크 정책 |
-| 인터랙션 | `generateHapticFeedback`, `requestReview`, `requestNotificationAgreement` | 햅틱, 리뷰 요청, 알림 수신 동의 |
+| 인터랙션 | `generateHapticFeedback`, `requestReview`, `Notification.requestAgreement` | 햅틱, 리뷰 요청, 알림 수신 동의 (구 `requestNotificationAgreement`는 deprecated) |
 | 데이터/파일 | `saveBase64Data`, `openPDFViewer`, `fetchAlbumItems` | 파일 저장, PDF 뷰어, 앨범 |
 | 친구초대 | `contactsViral` | 연락처 기반 친구초대 모듈, 공유 리워드 |
 
@@ -68,7 +68,7 @@ references:
 
 ## 존재하지 않는 기능 (확정)
 
-QR 스캐너·생체인증·블루투스/NFC·클라이언트 푸시 발송 SDK는 공홈에 존재하지 않음(2026-06-10 llms.txt 전수 대조). 푸시 발송은 서버 Smart Message API(ait-smart-message 스킬), 클라이언트는 `requestNotificationAgreement`(수신 동의)만.
+QR 스캐너·생체인증·블루투스/NFC·클라이언트 푸시 발송 SDK는 공홈에 존재하지 않음(2026-06-10 llms.txt 전수 대조). 푸시 발송은 **콘솔 직접 발송** 또는 **서버 API**(`POST /api-partner/v1/apps-in-toss/messenger/send-message`, mTLS) — 엔드포인트·한도·오류 코드는 `ait-smart-message/SKILL.md` "서버 직접 API 발송" 절, 개인화 시점 발송은 서버 API 필수. 클라이언트는 `Notification.requestAgreement`(수신 동의, `templateCode` 필요)만 — 파라미터는 `references/ait-interaction.md`.
 
 ## 공통 패턴
 

@@ -137,6 +137,84 @@ interface IapSubscriptionInfoResult {
 
 > **수수료 안내:** IAP 수수료 무료 프로모션 2026-06-30까지(이후 정책 공지 확인, 출처: https://toss.im/apps-in-toss/blog/update-26-3-5 )
 
+## 결제 전환 최적화 패턴 (웨비나 실측)
+
+> 출처: 앱인토스 공식 웨비나 2026-08-21. API가 아니라 **BM 설계 관점**의 실사례다.
+
+**전제 — 결제 최적화보다 이탈 개선이 먼저다.**
+실측 사례에서 **결과 화면을 본 유저의 23%가 결제까지 전환**했다. 즉 결제 UI를 손대기 전에
+**결과 화면까지 도달시키는 것**이 매출에 더 크게 기여한다(퍼널 개선은 `ait-analytics/references/growth-playbook.md` §4).
+
+| 패턴 | 내용 | 효과 |
+|---|---|---|
+| **선택지 다양화** | 단일 가격만 제시하지 않는다 — **1개월 무료 체험 / 첫 결제 할인 / 재구독 할인** 을 함께 노출 | 심리적 허들 완화 |
+| **부분 공개(티저)** | 결과가 100건이면 전부 보여주지 않고 **일부만 공개**, 나머지는 결제 후 열람 | 궁금증 → 결제 동기 |
+| **단건 + 정기구독 병행 제시** | "한 번 더 들어올 것 같은데 그냥 구독할까?" 라는 멘탈 모델을 유도 | 객단가·LTV 상승 |
+| **가격은 실험으로 정한다** | 2,000원으로 시작 → 피드백("2,000원은 절대 안 한다") → **990원**(세 자리 수)으로 낮춰 시장 검증 | 결제 저항 감소 |
+
+- 구독 상품은 `getProductItemList`의 `renewalCycle`(WEEKLY/MONTHLY/YEARLY)로 단건과 함께 한 화면에 배치할 수 있다.
+- **광고와 결제를 함께 쓸 때**: 결제 앞단에 광고를 두면 UX 훼손이 매출을 깎을 수 있다.
+  광고 유형 선택 기준은 `ait-ads.md`「광고 유형 선택 — eCPM 실측 범위와 의사결정」 참조.
+
+## 서버 웹훅 (구독 상태 변경) — 실측 기준
+
+> 실측 출처: 운영 서버 수신 로그 2026-08-24~26. 공홈 요약만 보고 최상위 `status`를 읽으면 **모든 구독 웹훅이 미처리**된다.
+
+### 페이로드 구조
+
+```json
+{
+  "eventType": "subscription.status_changed",
+  "occurredAt": "...",
+  "orderId": "...",
+  "sku": "...",
+  "changeReason": "CREATED",
+  "subscription": {
+    "previous": { "...": "..." },
+    "current": { "status": "ACTIVE", "accessGranted": true, "expiresAt": null, "autoRenew": true }
+  },
+  "eventVersion": "1.0"
+}
+```
+
+- 상태는 최상위가 아니라 **`subscription.current.status`** 에 온다.
+- 무슨 일이 있었는지의 판정 기준은 **`changeReason`** 이다 — `status`만으로는 해지를 구분할 수 없다(해지해도 ACTIVE 유지).
+
+| changeReason | 의미 | `current` 값 | 서버 처리 |
+|---|---|---|---|
+| `CREATED` | 구독 시작 | status=ACTIVE, autoRenew=true, **expiresAt=null** | 이용권 부여. 초기 만료일은 **서버가 갱신 주기로 계산** |
+| `RENEWED` | 자동갱신 결제 성공 | status=ACTIVE | 만료일 연장. **페이로드에 `expiresAt`이 오면 그 값을 우선**(결제 주기와 어긋나지 않게) |
+| `AUTO_RENEW_DISABLED` | 사용자 해지 | **status는 ACTIVE 유지**, autoRenew=false | 이용권은 만료일까지 유지, 갱신 예정만 해제 |
+| `EXPIRED` | 기간 만료 | accessGranted=false | 이용권 회수 |
+| `REVOKED` | 환불 | accessGranted=false | 즉시 이용권 회수 |
+
+- **`RENEWED` 미처리 = 실결제 사고**다. 자동갱신 결제는 되는데 이용권 만료일이 연장되지 않는다. `changeReason` 분기를 반드시 구현한다.
+- 해지 웹훅은 앱스토어 해지 약 1분 뒤 도착(실측). `CREATED`·`AUTO_RENEW_DISABLED` 2종 페이로드 실측 확보.
+
+### 웹훅 인증 헤더 — `Bearer {값}`
+
+콘솔 웹훅 설정에 등록한 인증 값은 **`Authorization: Bearer {등록값}`** 형식으로 전송된다(실측 2026-08-24). 콘솔 UI가 "Basic Auth 값"으로 표기해도 전송 형식은 Bearer다 — Basic 가정으로 대조하면 콘솔 테스트 발송이 401로 떨어진다.
+
+```python
+raw = request.headers.get("authorization", "")
+token = raw.removeprefix("Bearer ").removeprefix("Basic ").strip()   # raw/Basic/Bearer 3형식 수용
+if token != WEBHOOK_SECRET:
+    return Response(status_code=401)
+```
+
+## OS별 구독 해지·환불 경로
+
+실측 2026-08-24~26. FAQ·설정 화면의 사용자 안내 문구는 **OS 분기가 필수**다.
+
+| | 해지(자동갱신 취소) | 환불 |
+|---|---|---|
+| **iOS(애플 결제)** | **아이폰 설정 → Apple 계정 → 구독**. 토스 앱 내 "정기결제 관리"류 진입은 동작하지 않거나 안드로이드 전용 | **애플 전담**. 콘솔 **[환불 내역]에 표시되지 않는다** |
+| **Android·토스 결제** | 토스 앱 구독 관리 | 콘솔 환불 승인/반려 플로우 대상 |
+
+- 애플 환불은 요청과 승인이 분리되어 승인까지 **수 시간~1일 이상** 걸린다. 승인 지연 동안 서버·콘솔 어디에도 신호가 없고, 승인 시점에 `REVOKED` 웹훅이 도착한다.
+- 콘솔 [환불 내역]은 안드로이드·토스 결제 건 전용 — 애플 건을 여기서 찾으면 안 된다.
+- iOS 사용자에게 "토스 앱에서 해지하세요"라고 안내하면 **틀린 안내**다.
+
 ## 알려진 이슈·복구 패턴
 
 ### 구독 콜백 미호출 버그 — SDK 2.6.2 미만에서 발생, 2.6.2에서 수정 (공식 공지)
@@ -206,3 +284,4 @@ for (const order of orders) {
 ---
 > 검증: 2026-06-11 공홈 대조 [갱신됨: 2026-06-07 당시 제거했던 구독 API를 subscription.html 공홈 확인으로 재문서화 / createOneTimePurchaseOrder 파라미터 구조를 {options:{sku, processProductGrant}, onEvent, onError}로 수정 / getProductItemList·getPendingOrders·getCompletedOrRefundedOrders 반환을 `| undefined`로, getCompletedOrRefundedOrders에 key 페이지네이션 파라미터 추가 / 반환 타입·인터페이스 필드 공홈 일치 / 정기결제(구독) 절 신설(subscription.html 대조) / 알려진 이슈·복구 패턴 절 추가] 근거: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/인앱%20결제/IAP.html , https://developers-apps-in-toss.toss.im/bedrock/reference/framework/인앱%20결제/subscription.html
 > 이 문서가 stale일 수 있다. 불확실하면 공홈 조회: https://developers-apps-in-toss.toss.im/
+> 갱신: 2026-08-28 — 서버 웹훅(구독 상태 변경) 페이로드 구조·`changeReason` 판정표·웹훅 인증 헤더(Bearer)·OS별 해지/환불 경로 추가. 근거: 운영 서버 수신 로그 실측 2026-08-24~26 (이슈 #8·#9·#10).

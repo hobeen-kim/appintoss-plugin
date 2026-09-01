@@ -35,7 +35,7 @@ references:
 2. **mTLS 인증서 발급**: 콘솔 → 대상 앱 선택 → 왼쪽 메뉴 `mTLS 인증서` 탭 → `+ 발급받기`. 발급되면 **인증서 파일 + 키 파일** 다운로드. (근거: WebSearch 스니펫, integration-process.html)
 3. **복호화 키 + AAD 확인**: 토스 로그인 정보 등록이 완료되면 **복호화 키**를 확인할 수 있고, **AAD(Additional Authenticated Data)** 는 콘솔 등록 **이메일로 전달**된다. 이 키는 `login-me` 응답의 암호화 필드 복호화에 사용. (근거: develop.html, WebSearch 스니펫)
 4. **scope/동의항목**: 콘솔에서 받을 항목(scope)을 선택. 실제로는 **사용자가 동의한 값만** 응답에 내려온다. (근거: develop.html)
-5. **연동 해제 콜백 등록**: 콜백 URL과 basic auth 헤더를 콘솔에 입력. (근거: develop.html "콘솔에서 입력할 수 있어요")
+5. **연동 해제 콜백 등록**: 콘솔 입력란은 `콜백 URL` / `HTTP 메서드` / **`Basic Auth 헤더`(base64 인코딩된 값 한 칸)** 3개다 — ID·PW 두 칸이 아니다. `.env`의 USER/PASS를 `id:pw`로 이어 base64 인코딩한 값 하나를 넣는다. 콜백 URL 옆 **[테스트하기]** 버튼으로 저장 전 도달 검증을 한다. 콘솔 안내 기준 **이름·이메일·성별 외 추가 항목을 선택한 경우 필수**(조건부). (근거: develop.html + 콘솔 실측 2026-08-27)
    > 공홈 미검증: `console.html`(콘솔 가이드 상세 페이지)이 WebFetch에서 404 — 위 메뉴 경로의 정확한 화면 위치는 콘솔에서 직접 확인 필요.
 
 ### 2. 발급물을 서버에 배치 (.env 예시)
@@ -49,9 +49,10 @@ TOSS_DECRYPT_KEY=<콘솔에서 확인한 복호화 키>
 TOSS_DECRYPT_AAD=<이메일로 받은 AAD>
 # API Base
 TOSS_API_BASE=https://apps-in-toss-api.toss.im
-# 연동 해제 콜백 basic auth (콘솔 등록값과 동일하게)
+# 연동 해제 콜백 basic auth (서버 검증용 — 콘솔에는 base64(USER:PASS) 한 값으로 넣는다)
 TOSS_UNLINK_CALLBACK_USER=<basic-auth-user>
 TOSS_UNLINK_CALLBACK_PASS=<basic-auth-pass>
+# 콘솔 입력값 만들기: printf '%s:%s' "$TOSS_UNLINK_CALLBACK_USER" "$TOSS_UNLINK_CALLBACK_PASS" | base64
 ```
 비밀 관리: 키 파일은 시크릿 매니저(예: Vault/KMS/도커 시크릿)에 두고 .env엔 경로만. 복호화 키·AAD는 평문 커밋 금지.
 

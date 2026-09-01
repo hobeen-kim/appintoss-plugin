@@ -33,6 +33,9 @@ references:
 - **공통 응답 봉투** — 비즈니스 오류도 HTTP 200으로 온다. `resultType`이 `SUCCESS`가 아니면 전부 실패로 처리한다.
 - **QPM 3,000** — 앱당 분당 요청 한도. 초과 시 `4095`.
 - **mTLS·방화벽 IP** — 서버 API(로그인·결제·발송)를 쓸 때 필요하다.
+- **웹훅 수신 인증** — 콘솔에 등록한 인증 값은 **`Authorization: Bearer {값}`** 형식으로 온다(실측). Basic 가정으로 대조하면 401이 반복된다 — raw/Basic/Bearer 3형식을 수용한다. 상세: `ait-sdk/references/ait-iap.md` "웹훅 인증 헤더".
+- **구독 웹훅 페이로드** — 상태는 최상위가 아니라 `subscription.current.status`, 판정 기준은 `changeReason`이다. `RENEWED` 미처리는 결제 사고로 직결된다. 상세: `ait-sdk/references/ait-iap.md` "서버 웹훅(구독 상태 변경)".
+- **기능성 메시지 발송 API** — `POST /api-partner/v1/apps-in-toss/messenger/send-message`(단건, 앱당 분당 15,000 / 사용자당 분당 10) · `send-bulk-message`(분당 3,000) · `send-test-message`. 본문 `{ templateSetCode, context }`, mTLS + 사용자 인증 토큰. 상세: `ait-smart-message/SKILL.md` "서버 직접 API 발송".
 
 ## 문서 신선도
 

@@ -257,11 +257,11 @@ DOM 진입: `/app-build` → (버전 0개면) 본문 "첫 버전을 등록하고
 | 카테고리 마스터 조회 | `GET /impression/category-list` | 쿠키 | → 그룹/카테고리/서브카테고리 트리 | **가능** |
 | 앱 정보 임시저장(카테고리 포함) | `PUT /workspaces/{ws}/mini-app/{app}/draft` | 쿠키 | impression 은 `{keywordList, categoryIds[], subCategoryIds[]}` (단계 0-B 참조) | **가능** |
 | **앱 정보 검토 제출** | `POST /workspaces/{ws}/mini-app/review` | 쿠키 | `{workspaceId, miniApp{...}, impression{keywordList,categoryIds,subCategoryIds}}` → `{miniAppId}`; readback `hasInReview=true` | **가능** |
-| 버전 검토 요청 제출 | DOM 실측 확보(issue #1: "검토 요청"→"검토 요청하기" 모달) · API 미캡처 — 첫 라이브 제출 시 `dumps-write/review-submit-capture.json` 자동 기록 | 쿠키(추정) | releaseNote(textarea) 포함 | DOM 가능 / API 자동 캡처 예정 |
-| 출시하기 | DOM 클릭 구현(`출시하기` 버튼, APPROVED 후 노출) · API 미캡처 — 첫 라이브 출시 시 `dumps-write/release-capture.json` 자동 기록 | 쿠키(추정) | (미확인) | DOM 가능 / API 자동 캡처 예정 |
-| 검토 요청 취소 | DOM 실측 확보(issue #1: 검토중 행 "요청 취소" 버튼, "검토 중"→"요청 취소됨") · API 미캡처 — 첫 라이브 취소 시 `dumps-write/cancel-review-capture.json` 자동 기록 | 쿠키(추정) | (미확인) | DOM 가능 / API 자동 캡처 예정 |
+| 버전 검토 요청 제출 | DOM 실측 확보(issue #1: "검토 요청"→"검토 요청하기" 모달) · API 미캡처 | 쿠키(추정) | releaseNote(textarea) 포함 | **MANUAL**(v3.8.0~) — 자동화 안 함, 콘솔 직접 수행 |
+| 출시하기 | DOM 실측 확보(`출시하기` 버튼, APPROVED 후 노출) · API 미캡처 | 쿠키(추정) | (미확인) | **MANUAL**(v3.8.0~) — 자동화 안 함, 콘솔 직접 수행 |
+| 검토 요청 취소 | DOM 실측 확보(issue #1: 검토중 행 "요청 취소" 버튼, "검토 중"→"요청 취소됨") · API 미캡처 | 쿠키(추정) | (미확인) | **MANUAL**(v3.8.0~) — 파괴적 동작, 콘솔 직접 수행 |
 
-> 앱 생성·업로드(3-step, content-type=application/zip)·테스트 발송·**앱 정보 검토 제출(POST mini-app/review)** 은 **API 완전 대체 가능 확정**. 버전 검토 요청 제출·출시하기·검토 요청 취소는 **DOM 실측 기반으로 구현 완료**(issue #1) — 내부 API는 첫 라이브 실행 시 네트워크 캡처로 자동 기록해 본 표를 갱신한다. release-watch 크론이 `hasApproved`/`reviewStatus` 폴링으로 이어받음.
+> 앱 생성·업로드(3-step, content-type=application/zip)·테스트 발송·**앱 정보 검토 제출(POST mini-app/review)** 은 **API 완전 대체 가능 확정**(기술적 가능 여부 — 현재 자동화 범위는 `ait-console/SKILL.md`의 AUTO/MANUAL 구분이 기준). 버전 검토 요청 제출·출시하기·검토 요청 취소는 DOM 경로만 실측됐고 **v3.8.0부터 MANUAL**이다 — `ait-console.cjs`는 안내만 출력하며(`MANUAL_CMDS`), 자동 클릭·API 자동 캡처 코드는 제거됐다. 내부 API는 미캡처로 남는다. release-watch 크론은 `hasApproved`/`reviewStatus` 폴링으로 상태만 감시한다.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ```tsx
 // WebView
-import { generateHapticFeedback, requestReview, requestNotificationAgreement } from '@apps-in-toss/web-framework';
+import { generateHapticFeedback, requestReview, Notification } from '@apps-in-toss/web-framework';
 // React Native
 import { generateHapticFeedback, requestReview, requestNotificationAgreement } from '@apps-in-toss/framework';
 ```
@@ -54,12 +54,14 @@ const handleComplete = async () => {
 };
 ```
 
-### Notification.requestAgreement (구 `requestNotificationAgreement`)
+### Notification.requestAgreement (WebView) / requestNotificationAgreement (React Native)
 알림 수신 동의 요청 UI를 띄웁니다. — SDK 2.5.0 도입 (플랜 제공 정보, 공홈 개별 문서에는 버전 미명시 — 릴리즈 노트 조회 실패 2026-06-10)
 
-> **`requestNotificationAgreement`는 deprecated다.** `@apps-in-toss/web-framework@3.1.1` 타입 정의:
-> `@deprecated 이 함수는 더 이상 사용되지 않아요. Notification.requestAgreement를 사용해주세요.` (`@since` Toss Android 5.255.0, iOS 5.255.0)
-> 신규 코드는 `Notification.requestAgreement`를 쓴다. 시그니처는 동일하다.
+> **플랫폼별 함수가 다르다**(npm 타입 실측 2026-10-30):
+> - **WebView** `@apps-in-toss/web-framework` 3.x(3.9.0): `Notification.requestAgreement`를 쓴다. `requestNotificationAgreement`는 deprecated — `@deprecated 이 함수는 더 이상 사용되지 않아요. Notification.requestAgreement를 사용해주세요.` (`@since` Toss Android 5.255.0, iOS 5.255.0)
+> - **React Native** `@apps-in-toss/framework` 2.x(2.10.13): `Notification` 네임스페이스가 없다. `requestNotificationAgreement`를 쓴다(deprecated 아님).
+>
+> 시그니처는 동일하다.
 ```typescript
 function requestNotificationAgreement(params: {
   options: {
@@ -71,8 +73,8 @@ function requestNotificationAgreement(params: {
 
 type NotificationAgreementResult = 'newAgreement' | 'alreadyAgreed' | 'agreementRejected';
 ```
-- import: WebView `@apps-in-toss/web-framework`, RN `@apps-in-toss/framework`
-- `templateCode`: **콘솔 → 스마트 발송 → `기능성` 탭**에서 확인한다. 등록은 `알림동의문` 탭에서 하지만 발급된 코드는 **다른 탭(기능성)** 에 표시된다(공홈 `guide/marketing/smart-message`). 등록 화면 입력 항목은 `ait-smart-message` 스킬 참조
+- import: WebView `Notification` from `@apps-in-toss/web-framework`, RN `requestNotificationAgreement` from `@apps-in-toss/framework`
+- `templateCode`: 알림동의문이 연결된 **기능성 캠페인의 `발송 코드`**다. 콘솔이 발급하는 값이 아니라 캠페인 생성 시 개발자가 **직접 입력**하며 `{appName}-`로 시작한다. 등록 후 **콘솔 → 스마트 발송 → `기능성` 탭**에서 확인한다(알림동의문 탭 아님). 동의문만 등록해서는 코드가 생기지 않는다. 상세 절차는 `ait-smart-message` 스킬 참조
 - 반환값은 cleanup 함수 — 이벤트 리스너 해제용, 반드시 호출
 - 결과: `newAgreement`(신규 동의) / `alreadyAgreed`(이미 동의) / `agreementRejected`(거부)
 - 출처: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/인터렉션/requestNotificationAgreement.md
@@ -81,7 +83,7 @@ type NotificationAgreementResult = 'newAgreement' | 'alreadyAgreed' | 'agreement
 import { Notification } from '@apps-in-toss/web-framework';
 
 const cleanup = Notification.requestAgreement({
-  options: { templateCode: 'your-template-code' },
+  options: { templateCode: '{appName}-your-code' },
   onEvent: ({ type }) => {
     if (type === 'newAgreement') console.log('신규 동의');
     else if (type === 'alreadyAgreed') console.log('이미 동의됨');
@@ -97,7 +99,7 @@ const cleanup = Notification.requestAgreement({
 
 ## 주의사항
 - `requestReview`: 같은 세션에서 반복 호출 금지. 리뷰 노출 여부에 보상·진행을 걸지 말 것. 목표 달성 등 만족 시점에만 호출
-- `Notification.requestAgreement`: 콘솔에 알림 동의 템플릿을 먼저 등록하지 않으면 UI 미표시. cleanup 미호출 시 리스너 중복 등록·메모리 누수. **구 `requestNotificationAgreement`는 deprecated**
+- `Notification.requestAgreement`: 콘솔에 알림 동의 템플릿을 먼저 등록하지 않으면 UI 미표시. cleanup 미호출 시 리스너 중복 등록·메모리 누수. **WebView에서 `requestNotificationAgreement`는 deprecated**(RN은 이 함수가 유일)
 - 동의 이후 실제 메시지 발송은 자체 서버에서 트리거
 
 ## 출처
@@ -107,4 +109,5 @@ const cleanup = Notification.requestAgreement({
 
 ---
 > 검증: 2026-06-10 공홈 대조 [일치: 3개 API 시그니처·파라미터·반환 타입·결과 타입 모두 공홈 fetch 결과 기준 작성 / 도입 버전(2.4.0, 2.5.0)은 공홈 미확인 — 릴리즈 노트 조회 실패 (2026-06-10)]
+> 갱신: 2026-10-30 — 알림 동의 API WebView/RN 구분(npm web-framework 3.9.0 / framework 2.10.13 타입 실측), `templateCode` = 기능성 캠페인 `발송 코드`(입력값) 정정 (이슈 #11·#14)
 > 이 문서가 stale일 수 있다. 불확실하면 공홈 조회: https://developers-apps-in-toss.toss.im/

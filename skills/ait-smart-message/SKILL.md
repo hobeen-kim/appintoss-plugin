@@ -14,7 +14,7 @@ description: 토스 푸시 알림 마케팅 소재 생성 가이드. CTR 높이�
 | 구분 | 목적 | 예시 | 검수 | 발송 경로 | 제한 |
 |------|------|------|------|-----------|------|
 | 광고성 | 마케팅·프로모션 | 할인 이벤트, 신규 상품 홍보, 캠페인 프로모션 | 스마트발송 검수(최대 3영업일) | 스마트발송(콘솔) | 마케팅 수신 동의 사용자만 |
-| 기능성 | 서비스 필수·사용자 선택 알림 | 결제 완료, 배송 현황, 재입고 알림, 이벤트 시작 알림 | 소재 검토 승인 | 콘솔 직접 발송(서버 불필요) | 사전 알림 동의 등록(콘솔 기능) 선행 필요 |
+| 기능성 | 서비스 필수·사용자 선택 알림 | 결제 완료, 배송 현황, 재입고 알림, 이벤트 시작 알림 | 소재 검토 승인 | 콘솔 `토스에게 발송 요청하기`(서버 불필요) 또는 `직접 API로 발송하기`(서버 필요 — 개인화 시점) | 사전 알림 동의 등록(콘솔 기능) 선행 필요 |
 
 기능성(서비스 필수 정보) 알림은 스마트발송으로 발송할 수 없다.
 
@@ -69,18 +69,32 @@ description: 토스 푸시 알림 마케팅 소재 생성 가이드. CTR 높이�
 >
 > 공홈(`guide/marketing/smart-message`)은 `알림 동의문 이름`·`알림 발송 시점`·`알림 발송 방법` 3항목으로 적고 있으나, **실제 콘솔 화면은 `화면 제목`이라는 필수 필드를 따로 갖는다**(항목명 불일치 — 콘솔 실측이 기준).
 
-#### 등록 후 — `templateCode` 받기
+#### `templateCode` = 기능성 캠페인의 `발송 코드` (발급이 아니라 **직접 입력**)
 
-등록하면 템플릿 코드가 발급된다. **콘솔 → 스마트 발송 → `기능성` 탭**에서 확인한다 — **알림동의문 탭이 아니다**(출처: 공홈 `guide/marketing/smart-message`). 이 값이 없으면 SDK로 알림 동의를 아예 요청할 수 없다.
+`templateCode`는 콘솔이 발급해 주는 값이 **아니다.** 알림동의문이 연결된 **기능성 캠페인을 만들 때 개발자가 `발송 코드` 필드에 직접 정해서 입력하는 식별자**다(공홈: "그 알림 동의문이 연결된 기능성 메시지의 발송 코드예요" + 콘솔 실측 2026-08-28, 이슈 #11).
 
-**코드 연동 함수**: `Notification.requestAgreement`
-`requestNotificationAgreement`는 **deprecated**다(`@apps-in-toss/web-framework@3.1.1` 타입 정의 — "이 함수는 더 이상 사용되지 않아요. `Notification.requestAgreement`를 사용해주세요.", Toss Android/iOS 5.255.0 이후).
+- `발송 코드`는 캠페인 생성 화면의 **필수 입력 필드**다. 앞에 `{appName}-` 접두가 **고정**으로 붙어 있고 뒷부분만 입력한다 — 예: 앱 `tothemarriage` + 입력 `due-reminder` → 최종 `tothemarriage-due-reminder`. 필드 우측에 `API 발송 가이드` 버튼이 있다.
+- 이 최종 값 하나가 SDK의 `templateCode`이자 서버 API 본문의 `templateSetCode`다.
+- 등록 후에는 **콘솔 → 스마트 발송 → `기능성` 탭**에서 다시 확인할 수 있다 — 알림동의문 탭이 아니다.
+- **알림동의문만 등록해서는 코드가 생기지 않는다.** ① 알림동의문 탭에서 동의문 등록 → ② 기능성 탭에서 캠페인 생성(동의문 연결 + `발송 코드` 입력)의 **2단계**다. 사용자에게 "템플릿 코드를 알려 달라"고 요구하지 말고, **발송 코드 값을 에이전트가 제안**해 캠페인 생성 때 그대로 입력하게 안내한다.
+
+이 값이 없으면 SDK로 알림 동의를 아예 요청할 수 없다.
+
+**코드 연동 함수** — 플랫폼별로 다르다(npm 타입 실측 2026-10-30):
+
+| 플랫폼 | 패키지(최신) | 함수 |
+|---|---|---|
+| WebView | `@apps-in-toss/web-framework` 3.x (3.9.0) | **`Notification.requestAgreement`** — `requestNotificationAgreement`는 deprecated("이 함수는 더 이상 사용되지 않아요. `Notification.requestAgreement`를 사용해주세요.", Toss Android/iOS 5.255.0 이후) |
+| React Native | `@apps-in-toss/framework` 2.x (2.10.13) | **`requestNotificationAgreement`** — RN 패키지에는 `Notification` 네임스페이스가 없고 deprecated 표시도 없다 |
+
+시그니처(`options.templateCode`·`onEvent`·`onError`·cleanup 반환)는 두 함수가 같다.
 
 ```tsx
+// WebView — RN은 import { requestNotificationAgreement } from '@apps-in-toss/framework'
 import { Notification } from '@apps-in-toss/web-framework';
 
 const cleanup = Notification.requestAgreement({
-  options: { templateCode: '<콘솔 → 스마트 발송 → 기능성 탭에서 확인한 코드>' },
+  options: { templateCode: '<{appName}-로 시작하는 발송 코드>' },
   onEvent: ({ type }) => {
     // 'newAgreement' | 'alreadyAgreed' | 'agreementRejected'
   },
@@ -91,17 +105,35 @@ const cleanup = Notification.requestAgreement({
 
 파라미터·이벤트 상세는 `ait-sdk/references/ait-interaction.md` 참조.
 
-### 발송 방법
+### 발송 방법 — 캠페인 생성 시 라디오 2택
 
-- 콘솔에서 "토스에게 발송 요청하기" 기능으로 직접 발송 (서버 개발·토스 로그인 연동 불필요)
-- 콘솔 경로: 워크스페이스 → 미니앱 → 스마트 발송 → 캠페인 생성
+기능성 캠페인 생성 화면에서 `발송 방법`을 먼저 고른다. 이 선택이 서버 필요 여부를 가른다.
+
+| 선택지 | 콘솔 설명 | 고르는 경우 |
+|---|---|---|
+| **`직접 API로 발송하기`** | 서버에서 API를 연동해 자동 발송해요. | **사용자마다 시점·내용이 다른 개인화 알림**(D-day, 대기 완료, 가격 변동 등) — 아래 「서버 직접 API 발송」 필수. `발송 코드` 입력 |
+| **`토스에게 발송 요청하기`** | 해당 템플릿으로 발송해요. | 모두에게 같은 때 보내는 알림 — 서버 불필요. **알림 동의문이 반드시 필요**(공홈) |
+
+- 콘솔 경로: 워크스페이스 → 미니앱 → 스마트 발송 → `기능성` 탭 → 캠페인 생성 (공홈 최신 문서는 왼쪽 메뉴명을 `푸시알림`으로도 적는다 — `스마트 발송`이 안 보이면 `푸시알림`을 찾는다)
 - 메시지 제목·내용·이동 URL 작성 → 소재 검토 승인 후 활성화
+
+`토스에게 발송 요청하기`의 제약:
+
 - 일회성 또는 정기 발송 선택 가능. 단 **정기 발송의 주기는 전체 공통**으로만 설정된다:
   - **매일** — 매일 지정한 시간에 발송 / **매주** — 원하는 요일과 시간을 선택해 발송
   - 시작일·종료일 설정, `종료일 없음` 선택 시 직접 중단할 때까지 계속 발송
 - **"토스에게 발송 요청하기" 경로는 이름 변수만 사용할 수 있다.** 임의 변수 치환은 서버 API(`context`)에서만 가능하다.
 - **판정: 사용자마다 다른 날짜·시점에 보내야 하면 콘솔 정기 발송으로는 불가능하고 서버 API가 필수다.** (D-day 알림, 개인 스케줄 리마인드 등) — "정기 발송이 되니 서버 없이 가능하다"는 판단은 틀렸다. 이 판정은 앱의 서버 필요 여부를 바꾸므로 기획 단계에서 먼저 확정한다.
 - **테스트 발송**: 테스트 발송(test-send)은 사용자가 콘솔에서 직접 수행한다(보고서 §🙋 사용자가 해야 할 것 체크리스트로 안내). 기능성 템플릿 심사 대기는 `ait-console template-watch`가 심사 통과를 자동 감시하고 완료 시 알림을 제공한다.
+
+### 개인화 기능성 알림 연동 전체 순서 (실측 2026-08-28, 이슈 #11)
+
+1. 콘솔 → 스마트 발송 → **알림동의문** 탭 → 동의문 등록(`알림 발송 방법` = `특정 조건이 충족되면 직접 보내요.` · `화면 제목`)
+2. 콘솔 → 스마트 발송 → **기능성** 탭 → **캠페인 생성** — `발송 방법` = `직접 API로 발송하기`, 1의 동의문 연결, `발송 코드` **입력** → 문구 검수 승인 대기
+3. 앱에서 사용자 동의 받기 — WebView `Notification.requestAgreement({ options: { templateCode } })` / RN `requestNotificationAgreement(...)`. `templateCode` = 2의 발송 코드
+4. 서버에서 mTLS로 발송 API 호출(테스트는 `send-test-message` + `deploymentId`)
+
+**3을 건너뛰면 4는 HTTP 200·`resultType: SUCCESS`인데도 실제로는 `TERMS_DISAGREED_MEMBER`로 전부 실패한다**(아래 「응답 판정」).
 
 ## 기능성 알림 설계 — 무엇을, 언제 보낼 것인가 (실측)
 
@@ -139,8 +171,40 @@ const cleanup = Notification.requestAgreement({
 | 테스트 발송 | `POST /api-partner/v1/apps-in-toss/messenger/send-test-message` | 앱당 분당 3,000회 |
 
 - **인증**: mTLS 클라이언트 인증서(CN으로 미니앱 식별) + 사용자 인증 토큰(메시지 전송 scope). 인증서 발급·IP 대역은 `back-api/references/ait-server-api.md` 참조.
-- **본문**: `{ "templateSetCode": string, "context": object }` — `context`로 임의 변수를 치환한다(콘솔 발송의 이름 변수 한정과 다른 지점).
-- **오류**: HTTP는 **200**으로 오고 `resultType: "FAIL"`로 판별한다.
+- **본문**: `{ "templateSetCode": string, "context": object }` — `context`로 임의 변수를 치환한다(콘솔 발송의 이름 변수 한정과 다른 지점). 엔드포인트별 차이는 아래 「요청 형식」.
+- **대량 발송 제약**: 요청당 **최대 2,500건**, **50건 이상**일 때 사용한다. **야간(21:00~다음 날 08:00 전)에는 발송되지 않고 보류**됐다가 08:00 이후 나간다 — 야간에도 보내야 하면 단건(`send-message`)을 쓴다.
+
+#### 요청 형식 — 사용자 식별 위치가 엔드포인트마다 다르다
+
+| 엔드포인트 | 사용자 식별 | 본문 (필수 필드) |
+|---|---|---|
+| `send-message` | 헤더 **`x-toss-user-key: {userKey}`** 또는 **`x-anon-key: {anonKey}`** 중 하나 | `{ "templateSetCode": string, "context": object }` |
+| `send-bulk-message` | 헤더 불필요 — 본문 `contextList[]` 항목마다 `userKey`(int64) 또는 `anonKey` 중 하나 | `{ "templateSetCode": string, "contextList": [ { "userKey"?: number, "anonKey"?: string, "context": object } ] }` |
+| `send-test-message` | `send-message`와 같은 헤더 | `{ "templateSetCode": string, "deploymentId": string, "context": object }` |
+
+- `userKey`는 토스 로그인 `login-me` 응답, `anonKey`는 SDK `getAnonymousKey`(`User.getAnonymousKey`) 결과다.
+- **`context`는 필수다** — 변수가 없어도 `{}`를 넣는다.
+- **`send-test-message`는 `deploymentId`가 필수다.** 빠지면 HTTP 400 `errorCode: "40000"`, `errorDetails[].field = "deploymentId"`(실측). 값은 `ait deploy` 성공 시 출력되는 deploymentId(UUID) — 콘솔 앱 출시 메뉴의 업로드 번들, 배포 딥링크 `intoss-private://{app}?_deploymentId=...`의 값과 같다. 테스트 발송을 **어느 번들로 열지** 지정하는 값이다.
+- **템플릿 변수 표기법은 공홈에 명시가 없다**(`#{변수}`/`{변수}`/`{{변수}}` 미확정 — 공홈은 "API로 발송할 때 변수는 직접 개발해야 해요"까지만 적는다). 표기를 틀리면 검수 반려되거나 치환 없이 원문이 노출되므로, **확인 전에는 템플릿에 변수를 쓰지 말고 고정 문구로 등록**한다.
+
+#### 응답 판정 — HTTP 200이어도 실패일 수 있다
+
+- 비즈니스 오류는 HTTP **200** + `resultType`이 `SUCCESS`가 아닌 값(`FAIL`·`HTTP_TIMEOUT`·`NETWORK_ERROR`·`EXECUTION_FAIL`·`INTERRUPTED`·`INTERNAL_ERROR`)으로 온다. `SUCCESS`가 아니면 모두 실패로 처리한다.
+- **`resultType: SUCCESS`여도 실제 발송은 실패할 수 있다.** 응답 `success`의 `msgCount`(총 발송 수)와 채널별 `sentPushCount`·`sentInboxCount`·`sentSmsCount`·`sentAlimtalkCount`·`sentFriendtalkCount`, 그리고 `fail.{sentPush|sentInbox|...}[].reachedFailReason`을 반드시 확인한다.
+
+| `reachedFailReason` | 의미 | 조치 |
+|---|---|---|
+| `TERMS_DISAGREED_MEMBER` | 그 사용자가 **알림 동의를 하지 않았다** (실측) | 앱에서 `templateCode`로 동의 요청(연동 순서 3)부터 |
+
+다른 사유 값은 미확인이다 — 알 수 없는 값도 실패로 기록한다.
+
+```json
+{"resultType":"SUCCESS","success":{"msgCount":0,"sentPushCount":0,"sentInboxCount":0,
+  "fail":{"sentPush":[{"contentId":"trustee:PUSH-...","reachedFailReason":"TERMS_DISAGREED_MEMBER"}],
+          "sentInbox":[{"contentId":"trustee:INBOX-...","reachedFailReason":"TERMS_DISAGREED_MEMBER"}]}}}
+```
+
+오류 코드 (HTTP 200 + `resultType: FAIL`):
 
 | 코드 | 의미 |
 |---|---|
@@ -149,9 +213,11 @@ const cleanup = Notification.requestAgreement({
 | `4010` | 인증 정보 없음 |
 | `4095` | 요청 한도 초과 |
 
-> **선행 조건**: 기능성 푸시와 알림, 프로모션, 토스페이를 쓰려면 **토스 로그인을 반드시 연동**해야 한다(공홈). 로그인 연동은 `ait-login` 스킬.
+- `4095`는 `error.data.retryAfterSeconds`만큼 기다렸다 재시도한다. 표에 없는 `errorCode`도 실패로 처리하고 `reason`을 기록한다.
 
-출처: https://developers-apps-in-toss.toss.im/llms-full.txt (2026-08-27 조회)
+> **선행 조건 — 사용자 식별**: 기능성 푸시와 알림은 사용자 식별이 필요하다. **토스 로그인(`userKey`) 또는 사용자 식별키(`anonKey`) 중 하나**로 쓸 수 있다(공홈 2026-10-30 조회 기준 — 2026-08 조회 때의 "토스 로그인 반드시 연동" 문구에서 완화됐다). 로그인 연동은 `ait-login` 스킬, 식별키는 공홈 `guide/authentication/anon-key`.
+
+출처: https://developers-apps-in-toss.toss.im/api/push.md · https://developers-apps-in-toss.toss.im/guide/marketing/smart-message.md (2026-10-30 조회), 실측은 이슈 #11 코멘트(2026-08-28)
 
 ## 메시지 작성 규칙 (공식)
 
@@ -236,7 +302,7 @@ AI(Machine Learning)가 **pCTR(예측 클릭률) 기반**으로 고관여 사용
 
 - **워크스페이스(사업자)당 10만 건**까지 발송할 수 있다.
 - **재방문 유도 캠페인은 발송 시작일 기준 직전 30일간 사용자가 100명 이상**이어야 발송할 수 있다. 신규 앱은 이 조건 때문에 초기에 재방문 캠페인을 못 쓴다 — 신규 유입 캠페인부터 설계한다.
-- 광고성 캠페인은 그룹당 **소재 2개(a안·b안)**까지 등록할 수 있고, **동적 변수(`#{이름}` 등)를 쓸 수 없다**(기능성 API 발송에서는 변수 사용 가능, 변수는 2글자로 계산).
+- 광고성 캠페인은 그룹당 **소재 2개(a안·b안)**까지 등록할 수 있고, **동적 변수(`#{이름}` 등)를 쓸 수 없다**(기능성 API 발송에서는 변수 사용 가능, 변수는 2글자로 계산 — 단 기능성 템플릿의 변수 표기법은 미확정이라 「서버 직접 API 발송」의 고정 문구 권장을 따른다).
 - 푸시 내용을 작성하면 **알림 메시지에 자동 반영**된다.
 - 템플릿 문구 검수가 필요하다(광고성은 자동 검수). 문구 검토에서 알림 동의문이 필요하다고 반려되면, 동의문을 구성한 뒤 재검토를 요청한다.
 - 사용자가 알림 수신을 해제할 수 있는 기능과 안내를 제공하는 것이 권장된다(토스 앱 > 전체 탭 > 설정 > 알림 > 서비스별 알림).
@@ -330,6 +396,7 @@ AI 자동 최적화가 기본이지만, 수동으로 문구 변수를 비교하�
 
 ---
 > 갱신: 2026-08-25 공홈 대조 — 테스트 발송의 정체(내부 AI 학습 자동 발송)와 종료 조건(최대 7일 / 클릭 25건 · 발송 2,500건), 워크스페이스당 10만 건 한도, 재방문 캠페인 30일 100명 조건, 소재 2개·동적 변수 제한, 세그먼트 저장 옵션(즐겨찾기·고정 모수·샘플링)·유저 활동 접속 기준 추가. 근거: https://developers-apps-in-toss.toss.im/guide/marketing/smart-message , https://developers-apps-in-toss.toss.im/guide/marketing/intro
+> 갱신: 2026-10-30 — 이슈 #11 코멘트 실측 반영: `발송 코드`(= `templateCode` = `templateSetCode`)는 캠페인 생성 시 입력값, 발송 방법 2택, 연동 전체 순서, 엔드포인트별 사용자 식별(헤더 / `contextList`), `send-test-message`의 `deploymentId` 필수, 응답 판정(`msgCount`·`fail[].reachedFailReason`, `TERMS_DISAGREED_MEMBER`), 대량 발송 야간 보류·2,500건 한도, 토스 로그인 또는 `anonKey`, WebView/RN 함수 구분. 근거: 공홈 `api/push.md`·`guide/marketing/smart-message.md` + npm 타입(web-framework 3.9.0 / framework 2.10.13).
 
 ## 문서 신선도
 

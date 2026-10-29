@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.11.1 (2026-10-30)
+
+열린 이슈 재점검 — v3.10.0에서 조치했지만 닫히지 않은 8건(#1·#8~#14)을 문서와 대조해 누락분을 보완했다.
+
+- **fix(#11 코멘트)**: `ait-smart-message`에 이슈 코멘트 2건의 콘솔·API 실측을 반영(공홈 `api/push.md` 대조)
+  - `templateCode`는 콘솔이 **발급하는 값이 아니라** 기능성 캠페인 생성 시 **직접 입력하는 `발송 코드`**(`{appName}-` 접두 고정) — "발급된다"던 서술 정정. 동의문 등록 → 캠페인 생성의 2단계
+  - 캠페인 `발송 방법` 라디오 2택(`직접 API로 발송하기` / `토스에게 발송 요청하기`)과 선택 기준, 개인화 알림 연동 전체 순서 4단계
+  - 엔드포인트별 사용자 식별(단건·테스트는 헤더 `x-toss-user-key`|`x-anon-key`, 대량은 본문 `contextList[]`), **`send-test-message`의 `deploymentId` 필수**, `context` 필수
+  - 응답 판정 — HTTP 200·`SUCCESS`여도 `msgCount`·`fail[].reachedFailReason` 확인, `TERMS_DISAGREED_MEMBER` = 미동의
+  - 대량 발송 야간(21~08시) 보류·요청당 2,500건, 템플릿 변수 표기 미확정 → 고정 문구 권장
+  - 선행 조건 "토스 로그인 반드시 연동" → 공홈 갱신대로 **토스 로그인 또는 `anonKey`**
+- **fix(#14 보완)**: 알림 동의 함수 플랫폼 구분 — WebView(`web-framework` 3.9.0)는 `Notification.requestAgreement`, **RN(`framework` 2.10.13)은 `Notification`이 없어 `requestNotificationAgreement`가 유일**(npm 타입 실측). v3.10.0의 일괄 "deprecated" 서술과 WebView import 예시 정정 (`ait-interaction.md`, `ait-sdk/SKILL.md`)
+- **fix(#1 보완)**: `console-dom-map.md` 쓰기 API 표가 버전 검토 요청·출시·검토 취소를 아직 "DOM 구현 완료·API 자동 캡처 예정"으로 적던 잔여 드리프트를 **MANUAL**로 정정
+- `back-api` 발송 API 요약에 헤더·`deploymentId`·응답 판정 반영
+
 ## 3.11.0 (2026-09-01)
 
 **화면 흐름도 산출물 신설** — `appintoss-business`의 `doc-design/flow-guide.md`(의뢰인 발송 문서 표준)를 미니앱 파이프라인용으로 차용·적응했다.

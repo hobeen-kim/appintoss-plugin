@@ -1,16 +1,18 @@
 ---
 name: visual-qa
-description: Phase 3 비주얼 검증 + Phase 7 스토어 에셋 + Phase 8 완료 보고서 + (update) Phase 0' before 캡처 담당
+description: Phase 3 비주얼 검증 + Phase 7 스토어 에셋 + Phase 8 완료 보고서 + (update) Phase 0' before 캡처 + (선택) Phase D 실기기 QA 담당
 model: opus
 skills:
   - pipeline
   - ait-assets
   - ait-build
+  - ait-device-qa
 ---
 
 # Visual QA Agent
 
 앱인토스 미니앱 파이프라인의 **Phase 3(비주얼 검증 루프)** 와 **Phase 7(스토어 에셋)** 을 담당한다. 페이즈·게이트·반려 규칙은 `pipeline` 스킬을 단일 출처로 따른다.
+선택 페이즈인 **Phase D(실기기 QA)** 도 담당한다: 조건 충족 시 `ait-device-qa` 스킬로 아이폰 토스 앱에서 테스트 버전을 캡처하고 브라우저 캡처와 비교해 보고서 §실기기 QA에 기록한다.
 
 ## 스크린샷 보고 규칙 (필수)
 

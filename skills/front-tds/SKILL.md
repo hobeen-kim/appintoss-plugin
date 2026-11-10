@@ -95,6 +95,21 @@ TDS(@toss/tds-mobile)는 토스 디자인 시스템의 모바일 컴포넌트 �
 3. adaptive 색상 토큰 사용 (다크모드 자동 대응)
 4. 앱 설치 유도 금지. 외부 링크는 제한적 허용 (법률 고지, 공공기관 등)
 
+## 실기기(토스 앱) 함정: 브라우저에선 안 보임
+
+devtools·헤드리스 렌더링에서는 정상인데 아이폰 토스 앱 WebView에서만 드러난 문제다(이슈 #15, @toss/tds-mobile 2.5.1, iPhone 17·토스 5.283.0 실측).
+실기기 확인 방법은 `ait-device-qa` 스킬을 따른다.
+
+| # | 증상 | 원인(근거) | 처리 |
+|---|---|---|---|
+| 1 | 하단 탭처럼 `<a>`로 만든 메뉴를 탭하면 글자에 밑줄·파란색이 남는다 | TDS 전역 리셋에 `a:hover { color: #0056b3; text-decoration: underline; }`가 있고 iOS는 탭 뒤 hover 상태가 남는다(2.5.1 번들 실측) | 해당 링크에 `a:hover { color: inherit; text-decoration: none; }`를 범위 지정(클래스)해서 덮어쓰거나, 화면 전환 메뉴는 `<button>`으로 만든다 |
+| 2 | `BottomSheet` 아래쪽 필수 항목(체크박스·입력칸)이 스크롤해야만 보인다 | `maxHeight` 기본값이 `'70vh'`(글자 크기 150% 초과 시 `'90vh'`)이다(2.5.1 번들 실측). 실기기 WebView 높이에서 잘린다 | `maxHeight`를 지정(`number`(px) 또는 `` `${number}vh` ``)하거나 필수 항목을 위로 올린다. 확장이 필요하면 `expandBottomSheet`·`expandedMaxHeight`(기본 `'100vh'`) |
+| 3 | 토스트가 직접 만든 하단 탭바·고정 버튼을 가린다 | 앱 환경에서 `useToast`가 네이티브 토스트로 바뀌고 기본 위치가 하단이다(실기기 관찰). 네이티브 토스트는 3초 고정이다 | `openToast(msg, { gap: <탭바+고정버튼 높이+여유 px> })`. `gap`은 "상/하단에서 떨어질 간격, 다른 값들보다 우선 적용"(2.5.1 타입 정의) |
+| 4 | 비활성 `Button`의 색을 `--button-disabled-*` 변수로 바꿔도 흐리게 보인다 | 비활성 상태에 색 변수와 별개로 투명도가 걸린다. 실기기에서 0.38 확인(이슈 #15). 2.5.1 번들에도 `&:disabled { opacity: .38 }` 규칙과 variant별 비활성 텍스트 투명도(`weak` 0.3)가 있다 | 원칙은 TDS 기본 비활성 표현을 그대로 쓰고 시안을 거기에 맞춘다. 색을 꼭 바꿔야 하면 투명도까지 포함해 실기기 캡처로 확인한다 |
+| 5 | `BottomSheet`가 시안처럼 바닥에 붙지 않는다 | 좌우 10px 띄운 카드 형태이고 안전 영역만큼 위로 떠 있다(translateY, 실기기 관찰) | 시안을 TDS 실제 모양에 맞춘다. 덮어써서 바닥에 붙이지 않는다(TDS 변형은 검수 위험) |
+
+출처 이슈: https://github.com/hobeen-kim/appintoss-plugin/issues/15 . 번들 실측은 `npm pack @toss/tds-mobile@2.5.1`의 `dist/esm/index.js`·`index.d.ts`(2026-11-10).
+
 ## 컴포넌트 카테고리
 
 ### Provider (앱 설정)

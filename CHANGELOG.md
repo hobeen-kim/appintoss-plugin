@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.12.0 (2026-11-10)
+
+이슈 #15 반영. 브라우저 devtools·헤드리스 렌더링으로는 못 잡는 실기기 전용 문제를 아이폰 토스 앱에서 직접 확인하는 경로를 추가했다.
+
+- **신설** `ait-device-qa` 스킬: Appium(XCUITest)+WebDriverAgent로 USB 아이폰을 HTTP 조작(맥 마우스·키보드 미사용). 사용자 1회 설정 7항목, `ait-device.cjs`(doctor/build-wda/server/start/open/find/tap/swipe/drag/type/hide-keyboard/shot/stop, 쓰기 계열 `--dry-run`), 테스트 버전 딥링크 `intoss-private://`, 한글 입력·키보드·네이티브 토스트 3초 등 조작 요령. iOS 전용(Android 에뮬레이터는 Play 스토어가 토스 설치 차단)
+- **pipeline** 선택 페이즈 **Phase D 실기기 QA**(Phase C/C' 직후, `--device` 또는 `deviceQa.enabled`, doctor 미준비면 건너뜀·파이프라인 비차단). 브라우저 | 실기기 비교표, 실기기 전용 결함은 "출시 전 수정 필요"+`/appintoss:update` 권고
+- **front-tds** 「실기기(토스 앱) 함정」 5종(`a:hover` 잔류, BottomSheet 70vh, 네이티브 토스트 가림·`gap`, 비활성 투명도, BottomSheet 카드형·안전 영역)과 처리법. `a:hover` 리셋·70vh 기본값·`gap` 우선 적용·비활성 opacity는 tds-mobile 2.5.1 번들·타입 실측
+- **fix** `tds-bottom-sheet.md` `maxHeight`/`expandedMaxHeight` 타입이 `number`(px)로만 적혀 있던 오기 정정: 실제 ``number | `${number}vh` ``, 기본 `'70vh'`/`'100vh'`
+- `.appintoss.json` `deviceQa` 키, `--device` 플래그, visual-qa·orchestrator·skill-guide·ait-review·README 연결(README 스킬 수 정정, "범위 외: 실기기 테스트" 제거)
+
 ## 3.11.1 (2026-10-30)
 
 열린 이슈 재점검 — v3.10.0에서 조치했지만 닫히지 않은 8건(#1·#8~#14)을 문서와 대조해 누락분을 보완했다.

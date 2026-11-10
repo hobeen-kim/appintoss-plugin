@@ -46,6 +46,10 @@ interface ButtonProps {
 <Button disabled>비활성화</Button>
 ```
 
+## 실기기 주의
+- 비활성 `Button`은 색 변수와 별개로 투명도(실기기 0.38)가 걸린다. `--button-disabled-*`만 바꿔도 흐리게 보인다.
+- 기본 비활성 표현을 따르고, 색을 바꾸면 실기기 캡처로 확인한다. `front-tds` SKILL.md 「실기기(토스 앱) 함정」 참조.
+
 ---
 > 검증: 2026-06-07 공홈 대조 [갱신됨: size 기본값 medium→xlarge]
 > 이 문서가 stale일 수 있다. 불확실하면 공홈 조회: https://developers-apps-in-toss.toss.im/

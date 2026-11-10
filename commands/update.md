@@ -13,6 +13,7 @@ argument-hint: "변경 요청 (예: 월별 통계 화면 추가)"
 - 변경 요청이 비어 있으면 사용자에게 **1회만** "무엇을 변경할까요?"라고 질문한 뒤 진행한다.
 - `$ARGUMENTS`에 `--auto`가 있으면 **자동 모드**로 실행한다(Phase 8' 자동 승인 → Phase 9 git 자동 푸시). 규칙은 pipeline 스킬 Phase 8/9 정의를 따른다. `--auto`는 변경 요청 문자열에서 제외한다.
 - `--auto` 미지정 시 대상 디렉토리 `.appintoss.json`의 `autoMode`(기본 false)를 읽어 적용한다. 명령행 `--auto` 플래그가 항상 우선.
+- `--device`: Phase D 실기기 QA를 실행한다(또는 `.appintoss.json`의 `deviceQa.enabled`). `--device`는 변경 요청 문자열에서 제외한다.
 
 ## 단일 출처 — pipeline 스킬 로드
 
@@ -37,7 +38,8 @@ pipeline 스킬의 update 모드 정의를 따른다. 각 페이즈는 해당 �
    - **변경된 화면이 기존 화면예시 3장에 포함될 때만** 해당 화면예시를 재캡처한다. 그렇지 않으면 에셋 갱신을 생략한다.
 6. **Phase 8'** — visual-qa: `docs/REPORT-v{version}.md` 보고서 생성 (변경 화면 **before/after 비교 필수**) → 수동 모드면 경로 제시 후 **승인 대기로 종료**(사람의 유일한 개입 지점), 자동 모드면 자동 승인 후 Phase C'로 진행
 7. **Phase C'** — ait-console 스킬: `upload`(테스트 버전)까지 자동 수행(register는 파이프라인 자동 단계 아님). 각 단계 결과를 보고서 §콘솔 테스트에 기록. **이후 테스트 발송·앱 정보 입력·검토 요청·출시는 자동 수행하지 않으며**, 보고서 §사용자가 해야 할 것 체크리스트에 콘솔 수동 절차를 안내한다. `--auto` 모드도 동일하게 `upload` 단계 한정.
-8. **Phase 9** (자동 모드 한정) — reviewer: git 커밋 + (remote 있으면) push, 결과를 보고서에 기록 (pipeline Phase 9 가드 준수)
+8. **Phase D** (선택): visual-qa: `ait-device-qa` 스킬로 테스트 버전을 아이폰 토스 앱에서 열어 변경 화면 캡처, 브라우저 캡처와 비교해 보고서 §실기기 QA에 기록. 조건 불충족이면 건너뜀 사유만 기록
+9. **Phase 9** (자동 모드 한정): reviewer: git 커밋 + (remote 있으면) push, 결과를 보고서에 기록 (pipeline Phase 9 가드 준수)
 
 각 페이즈의 입력·산출물·게이트 기준은 pipeline 스킬에서 확인한다.
 

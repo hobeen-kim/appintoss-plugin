@@ -31,6 +31,7 @@ v2에서 전체 개발 플로우의 단계 진행과 게이트 통과 판정은 
 | 프론트엔드 구현·미니앱 화면 개발 | `app-developer` | `front-tds`, `ait-sdk` |
 | 서버·API 구현 | `back-developer` | `back-api` |
 | 시각 검수·스크린샷 기반 QA | `visual-qa` | `front-design` |
+| 실기기(아이폰 토스 앱) 테스트·캡처 | `visual-qa` | `ait-device-qa` |
 | 코드 리뷰·검수·빌드/배포/제출 점검 | `reviewer` | `ait-build`, `ait-submit` |
 
 > devops 역할은 v2에서 `reviewer`에 통합되었습니다. 빌드/배포/제출 관련 검수도 `reviewer`가 담당합니다.

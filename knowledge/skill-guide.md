@@ -35,6 +35,7 @@
 | `ait-docs` | 공식 문서 검색 — ax CLI 기반 Developer Center, TDS 문서 |
 | `ait-assets` | 콘솔 제출 에셋(앱 아이콘·화면 예시·썸네일) 자동 생성 |
 | `ait-setup` | 파이프라인 프로젝트 설정(.appintoss.json) 초기화 |
+| `ait-device-qa` | 아이폰 토스 앱 실기기 조작·캡처(Appium XCUITest + WebDriverAgent), 실기기 전용 문제 확인 |
 | `ait-console` | 콘솔 자동화 — 앱 등록·에셋·테스트 버전·테스트 발송·검토 요청·출시(명시 명령)·비동기 watcher(release/광고 ID 발급/템플릿 심사) |
 
 ### 개발

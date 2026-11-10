@@ -6,6 +6,7 @@ import { useToast } from '@toss/tds-mobile';
 
 ## 설명
 임시 알림 메시지를 명령형으로 표시하는 Overlay Extension 훅. 버튼 없으면 3초, 버튼 있으면 5초 후 자동 닫힘 (웹 기준).
+앱(토스 앱) 환경에서는 네이티브 토스트로 바뀌고 3초 고정이다. 토스트 버튼 조작은 바로 해야 한다(실기기 관찰, 이슈 #15).
 
 ## 메서드
 
@@ -19,7 +20,7 @@ openToast(message: string, options?: OpenToastOptions): { closeToast: () => void
 ```typescript
 interface OpenToastOptions {
   type?: "top" | "bottom";       // default: "bottom"
-  gap?: number;                   // 가장자리 간격 (px)
+  gap?: number;                   // 상/하단에서 떨어질 간격(px). 다른 위치 값보다 우선 적용
   icon?: string;                  // 아이콘 이름 (lottie와 배타)
   iconType?: "circle" | "square"; // 아이콘 형태
   lottie?: string;                // 로티 URL (icon과 배타)
@@ -73,6 +74,7 @@ function Example() {
 ```
 
 ## 플랫폼 차이
+- **주의**: 직접 만든 하단 탭바·고정 버튼이 있으면 토스트가 가리므로 `gap`으로 그 높이만큼 띄운다.
 - **웹**: 자동 닫힘 설정 가능, `closeToast()` 수동 닫기 가능
 - **앱(Android/iOS)**: 고정 위치 (Android 26px, iOS 46px), SafeArea/BottomCTA 높이 고려, 수동 닫기 불가
 

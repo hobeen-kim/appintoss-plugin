@@ -22,8 +22,8 @@ interface BottomSheetProps {
   ariaDescribedBy?: string;
   disableChildrenDragging?: boolean;      // default: false
   expandBottomSheet?: boolean;            // default: false - 드래그로 풀스크린 확장
-  maxHeight?: number;                     // 접힌 상태 높이 (px)
-  expandedMaxHeight?: number;             // 확장 상태 높이 (px)
+  maxHeight?: BottomSheetHeight;          // 접힌 상태 높이. default: '70vh'(fontScale > 150이면 '90vh')
+  expandedMaxHeight?: BottomSheetHeight;  // 확장 상태 높이. default: '100vh'
   expandBottomSheetWhenScroll?: boolean;  // default: false - 내부 스크롤 시 확장
   onExpanded?: () => void;
   onHandlerTouchStart?: (event: TouchEvent) => void;
@@ -38,6 +38,8 @@ interface BottomSheetProps {
   UNSAFE_ignoreBackEvent?: boolean;
   a11yIncludeHeaderInScroll?: boolean;    // default: true - 160%+ 텍스트 시 헤더 스크롤 포함
 }
+
+type BottomSheetHeight = number | `${number}vh`; // number는 px
 ```
 
 ## 서브 컴포넌트
@@ -115,6 +117,11 @@ cta={
 - `SelectField` 컴포넌트에서 옵션 선택 드롭다운으로 사용
 - `header` + `ListRow` 목록으로 옵션 나열
 
+## 실기기 주의
+- 기본 `maxHeight`가 70vh라 실기기에서 아래쪽 필수 항목이 잘린다. 좌우 10px 카드 형태이고 안전 영역만큼 떠 있다.
+- 상세와 처리는 `front-tds` SKILL.md 「실기기(토스 앱) 함정」 참조.
+
 ---
+> 갱신: 2026-11-10 maxHeight 타입·기본값 정정(2.5.1 index.d.ts·번들 실측, 이슈 #15)
 > 검증: 2026-06-07 공홈 대조 [일치: 주요 props·서브컴포넌트(Header/HeaderDescription/CTA/DoubleCTA/Select) 일치]
 > 이 문서가 stale일 수 있다. 불확실하면 공홈 조회: https://developers-apps-in-toss.toss.im/

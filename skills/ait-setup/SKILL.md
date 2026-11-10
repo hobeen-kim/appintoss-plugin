@@ -17,7 +17,15 @@ description: 앱인토스 파이프라인 프로젝트 설정(.appintoss.json) �
     "remote": "origin",
     "branch": "appintoss/auto"
   },
-  "autoMode": false
+  "autoMode": false,
+  "deviceQa": {
+    "enabled": false,
+    "udid": "",
+    "teamId": "",
+    "wdaBundleId": "",
+    "wdaDerivedDataPath": "",
+    "appiumPort": 4723
+  }
 }
 ```
 
@@ -26,6 +34,13 @@ description: 앱인토스 파이프라인 프로젝트 설정(.appintoss.json) �
 | `git.remote` | push 대상 remote 이름. 없으면 push 생략(로컬 커밋만) | `origin` |
 | `git.branch` | Phase 9가 커밋·push할 브랜치. 설정 시 그 브랜치 사용 | 현재 브랜치 |
 | `autoMode` | 커맨드에 `--auto` 미지정 시 적용할 자동 모드 기본값 | `false` |
+| `deviceQa` | (선택) 실기기 QA(Phase D, `ait-device-qa`) 설정 객체. 없으면 `--device` 플래그로만 실행 | 없음 |
+| `deviceQa.enabled` | `--device` 없이도 Phase D를 실행할지 | `false` |
+| `deviceQa.udid` | 대상 아이폰 UDID. 비우면 연결된 기기 1대를 자동 선택 | `""` |
+| `deviceQa.teamId` | Apple Developer 팀 ID (WDA 서명용) | `""` |
+| `deviceQa.wdaBundleId` | WDA 번들 ID. 팀 안에서 고유해야 한다 | `""` |
+| `deviceQa.wdaDerivedDataPath` | WDA 빌드 산출물 경로 | `""` |
+| `deviceQa.appiumPort` | Appium 서버 포트 | `4723` |
 
 - `autoMode: false`(기본)면 Phase 8 수동 승인으로 종료한다. `--auto` 플래그가 항상 우선한다.
 - `git.branch`를 지정하면 Phase 9가 기본 브랜치(main) 직접 push 대신 그 브랜치를 사용한다(파괴적 작업 방지 권장).

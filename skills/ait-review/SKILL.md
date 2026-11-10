@@ -22,6 +22,10 @@ references:
 4. **라이트 모드만 지원**
 5. **인터랙션 반응 2초 이내**
 
+## 실기기 확인 권장
+
+브라우저 devtools와 실제 토스 앱 화면이 다를 수 있다. 출시 전 `ait-device-qa`로 아이폰 토스 앱 실기기 캡처를 확인한다.
+
 ## 문서 신선도
 
 번들 문서가 stale일 수 있다. API·정책·규격이 불확실하면 공홈 조회를 우선하라: https://developers-apps-in-toss.toss.im/

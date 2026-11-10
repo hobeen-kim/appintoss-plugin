@@ -43,6 +43,7 @@ description: 앱인토스 미니앱 무개입 생성 파이프라인의 페이�
 | Playwright | 설치 + chromium 브라우저 존재 (`npx playwright install chromium`) | 설치 시도 → 불가 시 보고 |
 | 네트워크 | 공홈(https://developers-apps-in-toss.toss.im/) 도달 | 보고 후 번들 문서 폴백 모드로 진행 |
 | ait/granite CLI | **프로젝트 로컬** `node_modules/.bin/ait`·`.bin/granite` (`@apps-in-toss/web-framework` 의존성). `npm install` 후 존재 확인 | 의존성 누락 시 install 재시도 → 불가 시 보고 |
+| 실기기 QA 도구(선택) | `ait-device-qa`의 `ait-device.cjs doctor` exit 0 (Xcode·Appium xcuitest·연결된 아이폰·WDA 빌드) | 누락이어도 시작을 막지 않는다. Phase D를 건너뛰고 사유 기록 |
 | ax CLI + MCP | 권장(필수 아님) — `ax` 설치 + `apps-in-toss` MCP 등록 시 문서 참조 정확도 향상 | 미설치 시 brew 설치 시도 (`brew tap toss/tap && brew install ax` + `claude mcp add --transport stdio apps-in-toss ax mcp start`), 실패해도 파이프라인 진행 (llms.txt 폴백) |
 
 ait/granite CLI는 전역 설치가 아니라 프로젝트 로컬이다. preflight 단계에서 `npm install`을 수행한 뒤 `node_modules/.bin/ait`가 존재하는지 확인한다. **빌드는 `npx ait build`** — 구 `granite build`는 웹 프로젝트에서 폐기되었다(실측 2026-06-07, 'no longer supported' 에러). dev 서버는 `granite dev` 또는 `vite`를 사용한다.
@@ -308,6 +309,23 @@ Phase C와 동일하되 upload(테스트 버전)만 자동 수행한다(register
 
 ---
 
+### Phase D: 실기기 QA (선택, Phase C/C' 직후)
+
+| 항목 | 내용 |
+|---|---|
+| 입력 | Phase C/C' 업로드로 생긴 테스트 버전 deploymentId, Phase 3 브라우저 캡처 `qa-screens/`, `.appintoss.json`의 `deviceQa` |
+| 산출물 | `qa-screens/device/*.png`, 보고서 §실기기 QA (브라우저 \| 실기기 2열 비교표 + 실기기 전용 결함 목록) |
+| 담당 | visual-qa (`ait-device-qa` 스킬) |
+| 게이트 | (실행한 경우) 대상 화면 실기기 캡처 완료 + 비교표 작성. 대상 화면: create는 Phase 3 캡처 화면 전부, update는 변경 화면 |
+
+- **실행 조건**: 명령행 `--device` 또는 `deviceQa.enabled: true`, 그리고 `doctor` exit 0. 하나라도 아니면 건너뛰고 보고서에 "건너뜀: 사유"를 쓴다. **선택 페이즈라 파이프라인을 막지 않는다.**
+- 실기기 전용 결함은 보고서에 "출시 전 수정 필요"로 표시하고 `/appintoss:update`를 권고한다. Phase D 안에서 Phase 2로 자동 반려하지 않는다(재업로드 반복 방지).
+- 점검 포인트: `front-tds` 「실기기(토스 앱) 함정」 5종.
+- 운영 서버를 쓰는 테스트 버전이면 실제 데이터가 생긴다. 보고서 🙋 사용자가 해야 할 것에 정리 여부 확인 항목을 넣는다. 기기 잠금 해제·비밀번호·기기 설정 변경은 사용자 몫이다.
+- 자동 모드에서는 Phase D(실행 또는 건너뜀) 뒤 Phase 9로 간다.
+
+---
+
 ### 출시 상태머신·비동기 watcher (별도 명령 — 파이프라인 자동 단계 아님)
 
 아래 단계는 파이프라인이 자동 호출하지 않는다. 사용자가 "출시해라"라고 명시 명령할 때만 개시한다:
@@ -473,6 +491,7 @@ create/update 시작 시 대상 디렉토리에 `PIPELINE-LOG.md`가 있으면:
 | 공홈 조회 실패 | 번들 문서 폴백 + `REVIEW-REPORT.md`에 "공홈 미검증" 명시 |
 | 번들 100MB 초과 | 에셋 최적화 1회 자동 시도 → 실패 시 크기 내역과 함께 보고 |
 | 스크린샷 캡처 실패 | dev 서버 로그 확인 → 포트 충돌 재시도 → 렌더 실패는 Phase 2 반려로 전환 |
+| 실기기 QA 실패(기기 잠김·WDA 서명·딥링크 미열림) | `ait-device-qa` 트러블슈팅 1회 → 실패하면 Phase D를 건너뜀으로 기록하고 사용자 조치 항목을 보고서 🙋에 추가(파이프라인은 계속) |
 
 ---
 
@@ -480,8 +499,8 @@ create/update 시작 시 대상 디렉토리에 `PIPELINE-LOG.md`가 있으면:
 
 ```
 preflight (PIPELINE-LOG.md 있으면 재개 판정 — 마지막 판정:PASS + 산출물 실재 시 다음 페이즈부터 재개)
-  └─ create:  Phase 0 기획 → 1 디자인 → 2 구현(API 주제는 서버 스모크) → 3 비주얼검증(3-A 외관+3-B 동작+a11y axe-core 스캔+3-C 패널합의) → 4 정적검사 → 5 빌드 → 6 검수셀프체크(APP-SPEC.md 전체 마스터+SUBMIT.md 최소 문서=출시/업데이트 노트+앱 내 기능 생성) → 7 스토어에셋 → 8 완료보고·승인게이트 → C 콘솔 테스트(ait-console: upload 자동, 콘솔 앱 생성(register)은 사용자 직접 수행) → [자동 모드만] 9 git 자동푸시
-  └─ update:  Phase 0' 영향분석(+before캡처) → 1' 스펙갱신 → 2'~6'(create 동일, API 주제는 서버 스모크, Phase 3'은 변경화면만 3-A/3-B/a11y/3-C, 3-C는 before/after 패널 비교, 6'에서 APP-SPEC.md+SUBMIT.md 갱신) → 7' 에셋갱신(조건부) → 8' before/after 비교보고·승인게이트 → C' 콘솔 테스트(ait-console: upload 자동) → [자동 모드만] 9 git 자동푸시
+  └─ create:  Phase 0 기획 → 1 디자인 → 2 구현(API 주제는 서버 스모크) → 3 비주얼검증(3-A 외관+3-B 동작+a11y axe-core 스캔+3-C 패널합의) → 4 정적검사 → 5 빌드 → 6 검수셀프체크(APP-SPEC.md 전체 마스터+SUBMIT.md 최소 문서=출시/업데이트 노트+앱 내 기능 생성) → 7 스토어에셋 → 8 완료보고·승인게이트 → C 콘솔 테스트(ait-console: upload 자동, 콘솔 앱 생성(register)은 사용자 직접 수행) → [선택] D 실기기 QA(ait-device-qa) → [자동 모드만] 9 git 자동푸시
+  └─ update:  Phase 0' 영향분석(+before캡처) → 1' 스펙갱신 → 2'~6'(create 동일, API 주제는 서버 스모크, Phase 3'은 변경화면만 3-A/3-B/a11y/3-C, 3-C는 before/after 패널 비교, 6'에서 APP-SPEC.md+SUBMIT.md 갱신) → 7' 에셋갱신(조건부) → 8' before/after 비교보고·승인게이트 → C' 콘솔 테스트(ait-console: upload 자동) → [선택] D 실기기 QA(ait-device-qa) → [자동 모드만] 9 git 자동푸시
 
 게이트 미통과 → 원인 페이즈로 반려 (동일 페이즈 5회 초과 시 중단·보고)
 Phase 8/8' 승인 게이트 — 수동 승인(기본): 보고서 생성 후 사용자 승인 대기로 종료(파이프라인 자동 진행 중단, 사람의 유일한 개입 지점) / 자동 모드(--auto): 자동 승인 후 Phase 9 git 자동푸시로 진행
